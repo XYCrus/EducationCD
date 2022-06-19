@@ -4,7 +4,6 @@ import torch.optim as optim
 import numpy as np
 import json
 import sys
-from sklearn.metrics import roc_auc_score
 from data_loader import TrainDataLoader, ValTestDataLoader
 from model import Net
 
@@ -26,7 +25,7 @@ def train():
     optimizer = optim.Adam(net.parameters(), lr=0.002)
     print('training model...')
 
-    loss_function = nn.NLLLoss()
+    loss_function = nn.MSELoss()
     for epoch in range(epoch_n):
         data_loader.reset()
         running_loss = 0.0
@@ -34,14 +33,13 @@ def train():
         while not data_loader.is_end():
             batch_count += 1
             input_stu_ids, input_exer_ids, input_knowledge_embs, labels = data_loader.next_batch()
-            input_stu_ids, input_exer_ids, input_knowledge_embs, labels = input_stu_ids.to(device), input_exer_ids.to(device), input_knowledge_embs.to(device), labels.to(device)
+            input_stu_ids, input_exer_ids, input_knowledge_embs, labels = input_stu_ids.to(device), input_exer_ids.to(
+                device), input_knowledge_embs.to(device), labels.to(device)
             optimizer.zero_grad()
-            output_1 = net.forward(input_stu_ids, input_exer_ids, input_knowledge_embs)
-            output_0 = torch.ones(output_1.size()).to(device) - output_1
-            output = torch.cat((output_0, output_1), 1)
+            output = net.forward(input_stu_ids, input_exer_ids, input_knowledge_embs)
 
             # grad_penalty = 0
-            loss = loss_function(torch.log(output), labels)
+            loss = loss_function(torch.squeeze(output, 1), labels)
             loss.backward()
             optimizer.step()
             net.apply_clipper()
@@ -52,7 +50,7 @@ def train():
                 running_loss = 0.0
 
         # validate and save current model every epoch
-        rmse, auc = validate(net, epoch)
+        rmse = validate(net, epoch)
         save_snapshot(net, '../model/model_epoch' + str(epoch + 1))
 
 
@@ -66,7 +64,6 @@ def validate(model, epoch):
     net = net.to(device)
     net.eval()
 
-    correct_count, exer_count = 0, 0
     batch_count, batch_avg_loss = 0, 0.0
     pred_all, label_all = [], []
     while not data_loader.is_end():
@@ -76,27 +73,19 @@ def validate(model, epoch):
             device), input_knowledge_embs.to(device), labels.to(device)
         output = net.forward(input_stu_ids, input_exer_ids, input_knowledge_embs)
         output = output.view(-1)
-        # compute accuracy
-        for i in range(len(labels)):
-            if (labels[i] == 1 and output[i] > 0.5) or (labels[i] == 0 and output[i] < 0.5):
-                correct_count += 1
-        exer_count += len(labels)
         pred_all += output.to(torch.device('cpu')).tolist()
         label_all += labels.to(torch.device('cpu')).tolist()
 
     pred_all = np.array(pred_all)
     label_all = np.array(label_all)
-    # compute accuracy
-    accuracy = correct_count / exer_count
+
     # compute RMSE
     rmse = np.sqrt(np.mean((label_all - pred_all) ** 2))
-    # compute AUC
-    auc = roc_auc_score(label_all, pred_all)
-    print('epoch= %d, accuracy= %f, rmse= %f, auc= %f' % (epoch+1, accuracy, rmse, auc))
+    print('epoch= %d, rmse= %f' % (epoch + 1, rmse))
     with open('../result/model_val.txt', 'a', encoding='utf8') as f:
-        f.write('epoch= %d, accuracy= %f, rmse= %f, auc= %f\n' % (epoch+1, accuracy, rmse, auc))
+        f.write('epoch= %d, rmse= %f\n' % (epoch + 1, rmse))
 
-    return rmse, auc
+    return rmse
 
 
 def save_snapshot(model, filename):

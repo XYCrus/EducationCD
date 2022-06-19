@@ -36,7 +36,7 @@ class TrainDataLoader(object):
             ys.append(y)
 
         self.ptr += self.batch_size
-        return torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowedge_embs), torch.LongTensor(ys)
+        return torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys)
 
     def is_end(self):
         if self.ptr + self.batch_size > len(self.data):
@@ -82,7 +82,7 @@ class ValTestDataLoader(object):
             y = log['score']
             ys.append(y)
         self.ptr += 1
-        return torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowledge_embs), torch.LongTensor(ys)
+        return torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowledge_embs), torch.Tensor(ys)
 
     def is_end(self):
         if self.ptr >= len(self.data):

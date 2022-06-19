@@ -2,7 +2,6 @@ import torch
 import numpy as np
 import json
 import sys
-from sklearn.metrics import roc_auc_score
 from data_loader import ValTestDataLoader
 from model import Net
 
@@ -23,7 +22,6 @@ def test(epoch):
     net = net.to(device)
     net.eval()
 
-    correct_count, exer_count = 0, 0
     pred_all, label_all = [], []
     while not data_loader.is_end():
         input_stu_ids, input_exer_ids, input_knowledge_embs, labels = data_loader.next_batch()
@@ -31,25 +29,17 @@ def test(epoch):
             device), input_knowledge_embs.to(device), labels.to(device)
         out_put = net(input_stu_ids, input_exer_ids, input_knowledge_embs)
         out_put = out_put.view(-1)
-        # compute accuracy
-        for i in range(len(labels)):
-            if (labels[i] == 1 and out_put[i] > 0.5) or (labels[i] == 0 and out_put[i] < 0.5):
-                correct_count += 1
-        exer_count += len(labels)
+
         pred_all += out_put.tolist()
         label_all += labels.tolist()
 
     pred_all = np.array(pred_all)
     label_all = np.array(label_all)
-    # compute accuracy
-    accuracy = correct_count / exer_count
     # compute RMSE
     rmse = np.sqrt(np.mean((label_all - pred_all) ** 2))
-    # compute AUC
-    auc = roc_auc_score(label_all, pred_all)
-    print('epoch= %d, accuracy= %f, rmse= %f, auc= %f' % (epoch, accuracy, rmse, auc))
+    print('epoch= %d, rmse= %f' % (epoch, rmse))
     with open('../result/model_test.txt', 'a', encoding='utf8') as f:
-        f.write('epoch= %d, accuracy= %f, rmse= %f, auc= %f\n' % (epoch, accuracy, rmse, auc))
+        f.write('epoch= %d, rmse= %f\n' % (epoch, rmse))
 
 
 def load_snapshot(model, filename):
