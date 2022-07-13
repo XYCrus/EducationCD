@@ -17,19 +17,22 @@ class Net(nn.Module):
         super(Net, self).__init__()
 
         # network structure
+        len1 = len(str(self.exer_n)) - 1
+        first = str(self.exer_n)[0]
+        new_start = (int(first) + 1) * (10 ** len1)
+
         self.student_emb = nn.Embedding(self.emb_num, self.stu_dim)
-        self.k_difficulty = nn.Embedding(self.exer_n, self.knowledge_dim)
-        self.e_discrimination = nn.Embedding(self.exer_n, 1)
+        self.k_difficulty = nn.Embedding(self.exer_n + new_start + 1, self.knowledge_dim)
+        self.e_discrimination = nn.Embedding(self.exer_n + new_start + 1, 1)
         self.prednet_full1 = nn.Linear(self.prednet_input_len, self.prednet_len1)
         self.drop_1 = nn.Dropout(p=0.5)
         self.prednet_full2 = nn.Linear(self.prednet_len1, self.prednet_len2)
         self.drop_2 = nn.Dropout(p=0.5)
         self.prednet_full3 = nn.Linear(self.prednet_len2, 1)
 
-        # initialization
         for name, param in self.named_parameters():
             if 'weight' in name:
-                nn.init.xavier_normal_(param)
+                nn.init.xavier_uniform_(param)
 
     def forward(self, stu_id, exer_id, kn_emb):
         '''
@@ -57,7 +60,7 @@ class Net(nn.Module):
         self.prednet_full3.apply(clipper)
 
     def get_knowledge_status(self, stu_id):
-        stat_emb = torch.sigmoid(self.student_emb(stu_id))
+        stat_emb = self.student_emb(stu_id)
         return stat_emb.data
 
     def get_exer_params(self, exer_id):

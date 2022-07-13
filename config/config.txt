@@ -1,0 +1,6 @@
+156, 700, 162
+student_n, exercise_n, knowledge_n
+98657
+Number of samples
+../data/wholedata.csv
+Data file
