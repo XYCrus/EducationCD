@@ -75,7 +75,11 @@ class TrainDataLoaderCSV(object):
         self.curr_epoch = -1
         self.curr_round = 1
 
-
+        # load the data for training after split
+        with open('../config/data4training.csv', "r", encoding="utf-8-sig") as f:
+            csv_reader = csv.DictReader(f, skipinitialspace=True)
+            self.data = list(csv_reader)
+        self.data_len = len(self.data)
 
     def next_batch(self):
         rg = self.batch_size
