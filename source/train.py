@@ -13,6 +13,7 @@ device = torch.device(('cuda:0') if torch.cuda.is_available() else 'cpu')
 epoch_n = 5
 train_file = '../data/train_set_transformed.json'
 
+
 def train():
     if train_file.endswith('.json'):
         data_loader = TrainDataLoader(train_file)
@@ -25,8 +26,10 @@ def train():
     net = net.to(device)
     optimizer = optim.Adam(net.parameters(), lr=0.002)
     print('training model...')
-
     loss_function = nn.MSELoss()
+    # The score for evaluating a model(epoch), best_performance = accuracy - rmse (Can be changed for better training)
+    best_performance = -10.0
+
     for epoch in range(epoch_n):
         # data_loader.reset()
         running_loss = 0.0
@@ -52,9 +55,10 @@ def train():
                 running_loss = 0.0
 
         # validate and save current model every epoch
-        rmse = validate(net, epoch)
+        rmse, accuracy = validate(net, epoch)
         save_snapshot(net, '../model/model_epoch' + str(epoch + 1))
-        if epoch == epoch_n - 1:
+        if accuracy - rmse > best_performance:
+            best_performance = accuracy - rmse
             save_snapshot(net, '../model/model_epoch_latest')
 
 
@@ -137,7 +141,7 @@ def validate(model, epoch):
     with open('../result/model_val.txt', 'a', encoding='utf8') as f:
         f.write('epoch= %d, accuracy= %f, rmse= %f\n' % (epoch+1, accuracy, rmse))
 
-    return rmse
+    return rmse, accuracy
 
 
 def save_snapshot(model, filename):
