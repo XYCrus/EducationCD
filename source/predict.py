@@ -8,8 +8,9 @@ from model import Net
 from fake_test_generator import FakeTestGenerator
 import csv
 
-#Can be updated
+# Can be updated
 test_file = '../data/test_set_transformed.json'
+
 
 def test(epoch):
     data_loader = ValTestDataLoader(test_file, 'test')
@@ -25,7 +26,7 @@ def test(epoch):
     net = net.to(device)
     net.eval()
 
-    #i = 0
+    # i = 0
     correct_count, exer_count = 0, 0
     pred_all, label_all = [], []
     while not data_loader.is_end():
@@ -50,7 +51,7 @@ def test(epoch):
     # compute RMSE
     rmse = np.sqrt(np.mean((label_all - pred_all) ** 2))
     # compute AUC
-    #auc = roc_auc_score(label_all, pred_all)
+    # auc = roc_auc_score(label_all, pred_all)
     print('epoch= %s, accuracy= %f, rmse= %f' % (str(epoch), accuracy, rmse))
     with open('../result/model_test.txt', 'a', encoding='utf8') as f:
         f.write('epoch= %s, accuracy= %f, rmse= %f' % (str(epoch), accuracy, rmse))
@@ -84,7 +85,7 @@ def test_default(epoch, haveInputFile):
         data = FakeTestGenerator.generate("../data/train_set_transformed.json")
     data_len = len(data)
 
-    #Load Data
+    # Load Data
     input_stu_ids, input_exer_ids, input_knowedge_embs, ys = [], [], [], []
     for count in range(data_len):
         log = data[count]
@@ -96,21 +97,22 @@ def test_default(epoch, haveInputFile):
         input_exer_ids.append(log['exer_id'])
         input_knowedge_embs.append(knowledge_emb)
         ys.append(y)
-    
-    input_stu_ids, input_exer_ids, input_knowledge_embs, ys = torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys)
+
+    input_stu_ids, input_exer_ids, input_knowledge_embs, ys = torch.LongTensor(input_stu_ids), torch.LongTensor(
+        input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys)
 
     output = net(input_stu_ids, input_exer_ids, input_knowledge_embs)
     output = output.view(-1).tolist()
     # print(len(output))
     for i in range(data_len):
         data[i]['score'] = output[i]
-    
-    data = json.dumps(data, indent = 4)
+
+    data = json.dumps(data, indent=4)
     with open("../result/student_knowledge.json", "w") as outfile:
         outfile.write(data)
 
 
-def test_csv(epoch):
+def test_csv(epoch, train_file):
     with open('../config/config.txt') as configFile:
         student_n, exer_n, knowledge_n = configFile.readline().split(',')
     student_n, exer_n, knowledge_n = int(student_n), int(exer_n), int(knowledge_n)
@@ -131,10 +133,10 @@ def test_csv(epoch):
     with open('../config/knowledge_map.json', encoding='utf8') as i_f:
         knowledge_map = json.load(i_f)
 
-    data = FakeTestGenerator.generate(test_file)
+    data = FakeTestGenerator.generate(train_file)
     data_len = len(data)
 
-    #Load Data
+    # Load Data
     input_stu_ids, input_exer_ids, input_knowedge_embs, ys = [], [], [], []
     for count in range(data_len):
         log = data[count]
@@ -146,21 +148,46 @@ def test_csv(epoch):
         input_exer_ids.append(log['question_id'] - 1)
         input_knowedge_embs.append(knowledge_emb)
         ys.append(y)
-    
-    input_stu_ids, input_exer_ids, input_knowledge_embs, ys = torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys)
+
+    input_stu_ids, input_exer_ids, input_knowledge_embs, ys = torch.LongTensor(input_stu_ids), torch.LongTensor(
+        input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys)
 
     output = net(input_stu_ids, input_exer_ids, input_knowledge_embs)
     output = output.view(-1).tolist()
     # print(len(output))
+
+    json_data = []
+    current_student_id = ""
+    current_student_scores = dict()
     for i in range(data_len):
         data[i]['score_percentage'] = output[i]
+        if data[i]['stu_user_id'] != current_student_id:
+            if 'knowledge_scores' in current_student_scores:
+                json_data.append(current_student_scores)
+            current_student_scores = dict()
+            current_student_id = data[i]['stu_user_id']
+            current_student_scores['stuUserId'] = data[i]['stu_user_id']
+            current_student_scores['knowledge_scores'] = [{
+                'knowledge_tag_id': data[i]['knowledge_ids'][0],
+                'score': output[i]
+            }]
+        else:
+            current_student_scores['knowledge_scores'].append({
+                'knowledge_tag_id': data[i]['knowledge_ids'][0],
+                'score': output[i]
+            })
+    if 'knowledge_scores' in current_student_scores:
+        json_data.append(current_student_scores)
 
     keys = data[0].keys()
     with open('../result/student_knowledge.csv', 'w', newline='') as output_file:
         dict_writer = csv.DictWriter(output_file, keys)
         dict_writer.writeheader()
         dict_writer.writerows(data)
-    
+
+    with open('../result/student_knowledge.json', 'w') as output_file:
+        json.dump(json_data, output_file, indent=4)
+
 
 def load_snapshot(model, filename):
     f = open(filename, 'rb')
@@ -184,6 +211,7 @@ def get_status(epoch):
             # get knowledge status of student with stu_id (index)
             status = net.get_knowledge_status(torch.LongTensor([stu_id])).tolist()[0]
             output_file.write(str(status) + '\n')
+
 
 def get_exer_params(epoch):
     '''
@@ -218,7 +246,7 @@ if __name__ == '__main__':
             test_default(sys.argv[1], False)
         elif test_file.endswith('.csv'):
             test_csv(sys.argv[1])
-        
+
 
     elif len(sys.argv) == 1:
         if test_file.endswith('.json'):
@@ -234,7 +262,7 @@ if __name__ == '__main__':
         test('_latest', True)
         get_status('_latest')
         get_exer_params('_latest')
-    
+
 
     else:
         print('command:\n\tpython predict.py {epoch}\nexample:\n\tpython predict.py 70')
