@@ -1,3 +1,4 @@
+import os.path
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -8,6 +9,7 @@ from data_loader import TrainDataLoader, ValTestDataLoader
 from model import Net
 from data_loader_csv import TrainDataLoaderCSV
 from data_loader_csv import ValTestDataLoaderCSV
+from predict import test_csv
 
 device = torch.device(('cuda:0') if torch.cuda.is_available() else 'cpu')
 epoch_n = 5
@@ -204,7 +206,16 @@ def calculateLoss(output, target, question_types):
     # if (hasSChoice):
     #     loss += nll(torch.log(output_01), sChoiceTarget.long())
     # return loss
-    
+
+
+def check_folder():
+    if not os.path.exists('../config'):
+        os.mkdir('../config')
+    if not os.path.exists('../model'):
+        os.mkdir('../model')
+    if not os.path.exists('../result'):
+        os.mkdir('../result')
+
 
 if __name__ == '__main__':
     if (len(sys.argv) != 4) or ((sys.argv[2] != 'cpu') and ('cuda:' not in sys.argv[2])) or (not sys.argv[3].isdigit()):
@@ -214,5 +225,9 @@ if __name__ == '__main__':
         train_file = sys.argv[1]
         device = torch.device(sys.argv[2])
         epoch_n = int(sys.argv[3])
-
+    
+    check_folder()
     train()
+
+    print("predicting: " + train_file)
+    test_csv('_latest', train_file)
