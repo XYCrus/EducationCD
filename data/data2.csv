@@ -1,4 +1,4 @@
-stu_user_id,examination_id,start_datetime,question_id,question_type,knowledge_ids,score_percentage
+stuUserId,examinationId,startDatetime,questionId,questionType,knowledgeTagIds,scorePercentage
 83,4,9/19/20 10:02,1KQ7G74SK7,SHORTANSWER,"[""268356"", ""268347""]",1
 83,4,9/19/20 10:02,1KQ7G74SK9,MCHOICE,"[""268138""]",1
 83,4,9/19/20 10:02,1KQ7G74SKC,FILLBLANK,"[""268138""]",1
