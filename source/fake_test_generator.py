@@ -42,10 +42,10 @@ class FakeTestGenerator:
             for stu in stu_list:
                 for kl in knowledge_list:
                     sample = {
-                        "stu_user_id": stu,
-                        "question_id": fake_exer_id,
-                        "score_percentage": -1,
-                        "knowledge_ids": [
+                        "stuUserId": stu,
+                        "questionId": fake_exer_id,
+                        "scorePercentage": -1,
+                        "knowledgeTagIds": [
                             kl
                         ]
                     }
