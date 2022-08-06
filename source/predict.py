@@ -7,6 +7,7 @@ from data_loader import ValTestDataLoader
 from model import Net
 from fake_test_generator import FakeTestGenerator
 import csv
+from math import floor
 
 # Can be updated
 test_file = '../data/test_set_transformed.json'
@@ -174,12 +175,13 @@ def test_csv(epoch, train_file):
             current_student_scores['startDatetime'] = stu_latest_time_map[data[i]['stuUserId']]
             current_student_scores['knowledgeScores'] = [{
                 'knowledgeTagId': data[i]['knowledgeTagIds'][0],
-                'score': output[i]
+                # Truncate to 3 dp
+                'score': floor(output[i] * 1000) / 1000
             }]
         else:
             current_student_scores['knowledgeScores'].append({
                 'knowledgeTagId': data[i]['knowledgeTagIds'][0],
-                'score': output[i]
+                'score': floor(output[i] * 1000) / 1000
             })
     if 'knowledgeScores' in current_student_scores:
         json_data.append(current_student_scores)
