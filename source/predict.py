@@ -132,6 +132,8 @@ def test_csv(epoch, train_file):
         exer_map = json.load(i_f)
     with open('../config/knowledge_map.json', encoding='utf8') as i_f:
         knowledge_map = json.load(i_f)
+    with open('../config/stu_latest_time_map.json', encoding='utf8') as i_f:
+        stu_latest_time_map = json.load(i_f)
 
     data = FakeTestGenerator.generate(train_file)
     data_len = len(data)
@@ -156,6 +158,8 @@ def test_csv(epoch, train_file):
     output = output.view(-1).tolist()
     # print(len(output))
 
+
+
     json_data = []
     current_student_id = ""
     current_student_scores = dict()
@@ -167,6 +171,7 @@ def test_csv(epoch, train_file):
             current_student_scores = dict()
             current_student_id = data[i]['stuUserId']
             current_student_scores['stuUserId'] = data[i]['stuUserId']
+            current_student_scores['startDatetime'] = stu_latest_time_map[data[i]['stuUserId']]
             current_student_scores['knowledgeScores'] = [{
                 'knowledgeTagId': data[i]['knowledgeTagIds'][0],
                 'score': output[i]

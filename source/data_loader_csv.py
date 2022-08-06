@@ -24,6 +24,8 @@ class TrainDataLoaderCSV(object):
         exer_set = set([])
         knowledge_set = set([])
 
+        latest_time_map = dict()
+
         with open(self.data_file, "r", encoding="utf-8-sig") as f:
             csv_reader = csv.DictReader(f, skipinitialspace=True)
             self.data = list(csv_reader)
@@ -33,7 +35,8 @@ class TrainDataLoaderCSV(object):
             exer_set.add(sample['questionId'])
             kl_ids = json.loads(sample['knowledgeTagIds'])
             for kl in kl_ids:
-                knowledge_set.add(kl)    
+                knowledge_set.add(kl)
+            latest_time_map[sample['stuUserId']] = sample['startDatetime']
 
         self.student_n = len(stu_set)
         self.exer_n = len(exer_set)
@@ -64,6 +67,7 @@ class TrainDataLoaderCSV(object):
         json_stu = json.dumps(self.stu_map, indent=4)
         json_exer = json.dumps(self.exer_map, indent=4)
         json_kl = json.dumps(self.knowledge_map, indent=4)
+        json_latest_time = json.dumps(latest_time_map, indent=4)
 
         with open("../config/stu_map.json", "w") as outfile:
             outfile.write(json_stu)
@@ -71,6 +75,8 @@ class TrainDataLoaderCSV(object):
             outfile.write(json_exer)
         with open("../config/knowledge_map.json", "w") as outfile:
             outfile.write(json_kl)
+        with open("../config/stu_latest_time_map.json", "w") as outfile:
+            outfile.write(json_latest_time)
   
         self.curr_epoch = -1
         self.curr_round = 1
