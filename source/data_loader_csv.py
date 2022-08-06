@@ -24,16 +24,19 @@ class TrainDataLoaderCSV(object):
         exer_set = set([])
         knowledge_set = set([])
 
+        latest_time_map = dict()
+
         with open(self.data_file, "r", encoding="utf-8-sig") as f:
             csv_reader = csv.DictReader(f, skipinitialspace=True)
             self.data = list(csv_reader)
         
         for sample in self.data:
-            stu_set.add(sample['stu_user_id'])
-            exer_set.add(sample['question_id'])
-            kl_ids = json.loads(sample['knowledge_ids'])
+            stu_set.add(sample['stuUserId'])
+            exer_set.add(sample['questionId'])
+            kl_ids = json.loads(sample['knowledgeTagIds'])
             for kl in kl_ids:
-                knowledge_set.add(kl)    
+                knowledge_set.add(kl)
+            latest_time_map[sample['stuUserId']] = sample['startDatetime']
 
         self.student_n = len(stu_set)
         self.exer_n = len(exer_set)
@@ -64,6 +67,7 @@ class TrainDataLoaderCSV(object):
         json_stu = json.dumps(self.stu_map, indent=4)
         json_exer = json.dumps(self.exer_map, indent=4)
         json_kl = json.dumps(self.knowledge_map, indent=4)
+        json_latest_time = json.dumps(latest_time_map, indent=4)
 
         with open("../config/stu_map.json", "w") as outfile:
             outfile.write(json_stu)
@@ -71,6 +75,8 @@ class TrainDataLoaderCSV(object):
             outfile.write(json_exer)
         with open("../config/knowledge_map.json", "w") as outfile:
             outfile.write(json_kl)
+        with open("../config/stu_latest_time_map.json", "w") as outfile:
+            outfile.write(json_latest_time)
   
         self.curr_epoch = -1
         self.curr_round = 1
@@ -88,24 +94,24 @@ class TrainDataLoaderCSV(object):
             rg = 16
         # if self.is_end():
         #     return None, None, None, None
-        input_stu_ids, input_exer_ids, input_knowedge_embs, ys, question_types = [], [], [], [], []
+        input_stu_ids, input_exer_ids, input_knowedge_embs, ys, questionTypes = [], [], [], [], []
         for count in range(rg):
             log = self.data[self.ptr + count]
             knowledge_emb = [0.] * self.knowledge_n
-            for knowledge_code in json.loads(log['knowledge_ids']):
+            for knowledge_code in json.loads(log['knowledgeTagIds']):
                 knowledge_emb[self.knowledge_map[knowledge_code] - 1] = 1.0
-            y = float(log['score_percentage'])
-            input_stu_ids.append(self.stu_map[log['stu_user_id']] - 1)
-            input_exer_ids.append(self.exer_map[log['question_id']] - 1)
+            y = float(log['scorePercentage'])
+            input_stu_ids.append(self.stu_map[log['stuUserId']] - 1)
+            input_exer_ids.append(self.exer_map[log['questionId']] - 1)
             input_knowedge_embs.append(knowledge_emb)
             ys.append(y)
-            qt = log['question_type']
-            question_types.append(self.QTTransformer(qt))
+            qt = log['questionType']
+            questionTypes.append(self.QTTransformer(qt))
 
         self.ptr += self.batch_size
         #print(self.ptr)
         
-        return torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys), np.array(question_types)
+        return torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys), np.array(questionTypes)
 
     def is_end(self):
         if self.ptr + self.batch_size > self.data_len:
@@ -176,22 +182,22 @@ class ValTestDataLoaderCSV(object):
     def next_batch(self):
         if self.is_end():
             return None, None, None, None
-        input_stu_ids, input_exer_ids, input_knowedge_embs, ys, question_types = [], [], [], [], []
+        input_stu_ids, input_exer_ids, input_knowedge_embs, ys, questionTypes = [], [], [], [], []
         for count in range(self.batch_size):
             log = self.data[self.ptr + count]
             knowledge_emb = [0.] * self.knowledge_n
-            for knowledge_code in json.loads(log['knowledge_ids']):
+            for knowledge_code in json.loads(log['knowledgeTagIds']):
                 knowledge_emb[self.knowledge_map[knowledge_code] - 1] = 1.0
-            y = float(log['score_percentage'])
-            input_stu_ids.append(self.stu_map[log['stu_user_id']] - 1)
-            input_exer_ids.append(self.exer_map[log['question_id']] - 1)
+            y = float(log['scorePercentage'])
+            input_stu_ids.append(self.stu_map[log['stuUserId']] - 1)
+            input_exer_ids.append(self.exer_map[log['questionId']] - 1)
             input_knowedge_embs.append(knowledge_emb)
             ys.append(y)
-            question_types.append(self.QTTransformer(log['question_type']))
+            questionTypes.append(self.QTTransformer(log['questionType']))
 
         self.ptr += self.batch_size
         
-        return torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys), question_types
+        return torch.LongTensor(input_stu_ids), torch.LongTensor(input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys), questionTypes
 
     def is_end(self):
         if self.ptr + self.batch_size > self.data_len:
@@ -229,10 +235,10 @@ class DataSplitter(object):
             csv_reader = csv.DictReader(f, skipinitialspace=True)
             wholeData = list(csv_reader)
         lastIndex = len(wholeData) - 1
-        lastDate = wholeData[lastIndex]['start_datetime']
+        lastDate = wholeData[lastIndex]['startDatetime']
         lastMonth = lastDate.split('/')[0]
         valData = []
-        while wholeData[-1]['start_datetime'].split('/')[0] == lastMonth:
+        while wholeData[-1]['startDatetime'].split('/')[0] == lastMonth:
             valData.append(wholeData.pop())
         valData.reverse()
 

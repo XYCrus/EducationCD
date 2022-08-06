@@ -39,13 +39,13 @@ def train():
         data_loader.curr_epoch = epoch + 1
         while not data_loader.is_epoch_end():
             batch_count += 1
-            input_stu_ids, input_exer_ids, input_knowledge_embs, target, question_types = data_loader.next_batch()
+            input_stu_ids, input_exer_ids, input_knowledge_embs, target, questionTypes = data_loader.next_batch()
             input_stu_ids, input_exer_ids, input_knowledge_embs, target = input_stu_ids.to(device), input_exer_ids.to(device), input_knowledge_embs.to(device), target.to(device)
             optimizer.zero_grad()
             output = net.forward(input_stu_ids, input_exer_ids, input_knowledge_embs)
             output = torch.squeeze(output, 1)
 
-            loss = calculateLoss(output, target, question_types)
+            loss = calculateLoss(output, target, questionTypes)
             # loss = loss_function(output, target)
             loss.backward()
             optimizer.step()
@@ -85,21 +85,21 @@ def validate(model, epoch):
 
     correct_count, exer_count = 0, 0
     batch_count, batch_avg_loss = 0, 0.0
-    pred_all, label_all, question_types_all = [], [], []
+    pred_all, label_all, questionTypes_all = [], [], []
     while not data_loader.is_end():
         batch_count += 1
-        input_stu_ids, input_exer_ids, input_knowledge_embs, labels, question_types = data_loader.next_batch()
+        input_stu_ids, input_exer_ids, input_knowledge_embs, labels, questionTypes = data_loader.next_batch()
         input_stu_ids, input_exer_ids, input_knowledge_embs, labels = input_stu_ids.to(device), input_exer_ids.to(
             device), input_knowledge_embs.to(device), labels.to(device)
         output = net.forward(input_stu_ids, input_exer_ids, input_knowledge_embs)
         output = output.view(-1)
         # compute accuracy
         for i in range(len(labels)):
-            if question_types[i] == 4:
+            if questionTypes[i] == 4:
                 # error acceptable
                 if (abs(labels[i] - output[i]) < 0.1):
                     correct_count += 1
-            elif question_types[i] == 1 or question_types[i] == 2:
+            elif questionTypes[i] == 1 or questionTypes[i] == 2:
                 if labels[i] == 1 and output[i] > 0.8:
                     correct_count += 1
                 elif labels[i] == 0.6 and output[i] <= 0.8 and output[i] > 0.5:
@@ -108,7 +108,7 @@ def validate(model, epoch):
                     correct_count += 1
                 elif labels[i] == 0 and output[i] <= 0.2:
                     correct_count += 1
-            elif question_types[i] == 3:
+            elif questionTypes[i] == 3:
                 if labels[i] == 1 and output[i] > 0.5:
                     correct_count += 1
                 elif labels[i] == 0 and output[i] <= 0.5:
@@ -116,14 +116,14 @@ def validate(model, epoch):
         exer_count += len(labels)
         pred_all += output.to(torch.device('cpu')).tolist()
         label_all += labels.to(torch.device('cpu')).tolist()
-        question_types_all.extend(question_types)
+        questionTypes_all.extend(questionTypes)
 
     pred_all = np.array(pred_all)
-    for i in range(len(question_types_all)):
+    for i in range(len(questionTypes_all)):
         # Mapping
-        if question_types_all[i] == 3:
+        if questionTypes_all[i] == 3:
             pred_all[i] = 1 if pred_all[i] > 0.5 else 0
-        elif question_types_all[i] == 1 or question_types_all[i] == 2:
+        elif questionTypes_all[i] == 1 or questionTypes_all[i] == 2:
             if pred_all[i] > 0.8:
                 pred_all[i] = 1
             elif pred_all[i] > 0.5:
@@ -151,15 +151,15 @@ def save_snapshot(model, filename):
     torch.save(model.state_dict(), f)
     f.close()
 
-def calculateLoss(output, target, question_types):
-    for i in range(len(question_types)):
+def calculateLoss(output, target, questionTypes):
+    for i in range(len(questionTypes)):
         # Mapping
-        if question_types[i] == 3:
+        if questionTypes[i] == 3:
             if output[i] > 0.5 and target[i] == 1:
                 target[i] = output[i]
             elif output[i] <= 0.5 and target[i] == 0:
                 target[i] = output[i]
-        if question_types[i] == 1 or question_types[i] == 2:
+        if questionTypes[i] == 1 or questionTypes[i] == 2:
             if output[i] > 0.8 and target[i] == 1:
                 target[i] = output[i]
             elif output[i] > 0.5 and output[i] <= 0.8 and target[i] == 0.6:
@@ -178,21 +178,21 @@ def calculateLoss(output, target, question_types):
     # sChoiceTarget = torch.clone(target)
     # shortAnswerTarget = torch.clone(target)
     # hasSChoice = False
-    # for i in range(len(question_types)):
-    #     if question_types[i] == 1:
+    # for i in range(len(questionTypes)):
+    #     if questionTypes[i] == 1:
     #         mChoiceTarget[i] = output[i]
     #         sChoiceTarget[i] = output[i]
     #         shortAnswerTarget[i] = output[i]
-    #     elif question_types[i] == 2:
+    #     elif questionTypes[i] == 2:
     #         fillBlankTarget[i] = output[i]
     #         sChoiceTarget[i] = output[i]
     #         shortAnswerTarget[i] = output[i]
-    #     elif question_types[i] == 3:
+    #     elif questionTypes[i] == 3:
     #         mChoiceTarget[i] = output[i]
     #         fillBlankTarget[i] = output[i]
     #         shortAnswerTarget[i] = output[i]
     #         hasSChoice = True
-    #     elif question_types[i] == 4:
+    #     elif questionTypes[i] == 4:
     #         mChoiceTarget[i] = output[i]
     #         fillBlankTarget[i] = output[i]
     #         sChoiceTarget[i] = output[i]

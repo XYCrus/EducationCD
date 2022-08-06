@@ -7,6 +7,7 @@ from data_loader import ValTestDataLoader
 from model import Net
 from fake_test_generator import FakeTestGenerator
 import csv
+from math import floor
 
 # Can be updated
 test_file = '../data/test_set_transformed.json'
@@ -132,6 +133,8 @@ def test_csv(epoch, train_file):
         exer_map = json.load(i_f)
     with open('../config/knowledge_map.json', encoding='utf8') as i_f:
         knowledge_map = json.load(i_f)
+    with open('../config/stu_latest_time_map.json', encoding='utf8') as i_f:
+        stu_latest_time_map = json.load(i_f)
 
     data = FakeTestGenerator.generate(train_file)
     data_len = len(data)
@@ -141,11 +144,11 @@ def test_csv(epoch, train_file):
     for count in range(data_len):
         log = data[count]
         knowledge_emb = [0.] * knowledge_n
-        for knowledge_id in log['knowledge_ids']:
+        for knowledge_id in log['knowledgeTagIds']:
             knowledge_emb[knowledge_map[knowledge_id] - 1] = 1.0
-        y = log['score_percentage']
-        input_stu_ids.append(stu_map[log['stu_user_id']] - 1)
-        input_exer_ids.append(log['question_id'] - 1)
+        y = log['scorePercentage']
+        input_stu_ids.append(stu_map[log['stuUserId']] - 1)
+        input_exer_ids.append(log['questionId'] - 1)
         input_knowedge_embs.append(knowledge_emb)
         ys.append(y)
 
@@ -156,27 +159,31 @@ def test_csv(epoch, train_file):
     output = output.view(-1).tolist()
     # print(len(output))
 
+
+
     json_data = []
     current_student_id = ""
     current_student_scores = dict()
     for i in range(data_len):
-        data[i]['score_percentage'] = output[i]
-        if data[i]['stu_user_id'] != current_student_id:
-            if 'knowledge_scores' in current_student_scores:
+        data[i]['scorePercentage'] = output[i]
+        if data[i]['stuUserId'] != current_student_id:
+            if 'knowledgeScores' in current_student_scores:
                 json_data.append(current_student_scores)
             current_student_scores = dict()
-            current_student_id = data[i]['stu_user_id']
-            current_student_scores['stuUserId'] = data[i]['stu_user_id']
-            current_student_scores['knowledge_scores'] = [{
-                'knowledge_tag_id': data[i]['knowledge_ids'][0],
-                'score': output[i]
+            current_student_id = data[i]['stuUserId']
+            current_student_scores['stuUserId'] = data[i]['stuUserId']
+            current_student_scores['startDatetime'] = stu_latest_time_map[data[i]['stuUserId']]
+            current_student_scores['knowledgeScores'] = [{
+                'knowledgeTagId': data[i]['knowledgeTagIds'][0],
+                # Truncate to 3 dp
+                'score': floor(output[i] * 1000) / 1000
             }]
         else:
-            current_student_scores['knowledge_scores'].append({
-                'knowledge_tag_id': data[i]['knowledge_ids'][0],
-                'score': output[i]
+            current_student_scores['knowledgeScores'].append({
+                'knowledgeTagId': data[i]['knowledgeTagIds'][0],
+                'score': floor(output[i] * 1000) / 1000
             })
-    if 'knowledge_scores' in current_student_scores:
+    if 'knowledgeScores' in current_student_scores:
         json_data.append(current_student_scores)
 
     keys = data[0].keys()

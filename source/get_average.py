@@ -16,7 +16,7 @@ for key in stu_scores.keys():
     stu_scores[key] = []
 
 for log in stu_data:
-    stu_scores[log['stu_user_id']].append(float(log['score_percentage']))
+    stu_scores[log['stuUserId']].append(float(log['scorePercentage']))
 
 for key in stu_scores.keys():
     stu_scores[key] = mean(stu_scores[key])
