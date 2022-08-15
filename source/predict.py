@@ -2,7 +2,6 @@ import torch
 import numpy as np
 import json
 import sys
-from sklearn.metrics import roc_auc_score
 from data_loader import ValTestDataLoader
 from model import Net
 from fake_test_generator import FakeTestGenerator
@@ -15,8 +14,8 @@ test_file = '../data/test_set_transformed.json'
 
 def test(epoch):
     data_loader = ValTestDataLoader(test_file, 'test')
-    with open('../config/config.txt') as configFile:
-        student_n, exer_n, knowledge_n = configFile.readline().split(',')
+    with open('../config/config.txt') as config_file:
+        student_n, exer_n, knowledge_n = config_file.readline().split(',')
     student_n, exer_n, knowledge_n = int(student_n), int(exer_n), int(knowledge_n)
 
     net = Net(student_n, exer_n, knowledge_n)
@@ -39,7 +38,7 @@ def test(epoch):
 
         # compute accuracy
         for i in range(len(labels)):
-            if (abs(labels[i] - out_put[i]) < 0.1):
+            if abs(labels[i] - out_put[i]) < 0.1:
                 correct_count += 1
         exer_count += len(labels)
         pred_all += out_put.tolist()
@@ -58,9 +57,9 @@ def test(epoch):
         f.write('epoch= %s, accuracy= %f, rmse= %f' % (str(epoch), accuracy, rmse))
 
 
-def test_default(epoch, haveInputFile):
-    with open('../config/config.txt') as configFile:
-        student_n, exer_n, knowledge_n = configFile.readline().split(',')
+def test_default(epoch, have_input_file):
+    with open('../config/config.txt') as config_file:
+        student_n, exer_n, knowledge_n = config_file.readline().split(',')
     student_n, exer_n, knowledge_n = int(student_n), int(exer_n), int(knowledge_n)
     print(student_n, exer_n, knowledge_n)
 
@@ -71,16 +70,12 @@ def test_default(epoch, haveInputFile):
     net = net.to(device)
     net.eval()
 
-    data = []
-
     with open('../config/stu_map.json', encoding='utf8') as i_f:
         stu_map = json.load(i_f)
-    with open('../config/exer_map.json', encoding='utf8') as i_f:
-        exer_map = json.load(i_f)
     with open('../config/knowledge_map.json', encoding='utf8') as i_f:
         knowledge_map = json.load(i_f)
 
-    if haveInputFile:
+    if have_input_file:
         data = FakeTestGenerator.generate(test_file)
     else:
         data = FakeTestGenerator.generate("../data/train_set_transformed.json")
@@ -114,8 +109,8 @@ def test_default(epoch, haveInputFile):
 
 
 def test_csv(epoch, train_file):
-    with open('../config/config.txt') as configFile:
-        student_n, exer_n, knowledge_n = configFile.readline().split(',')
+    with open('../config/config.txt') as config_file:
+        student_n, exer_n, knowledge_n = config_file.readline().split(',')
     student_n, exer_n, knowledge_n = int(student_n), int(exer_n), int(knowledge_n)
 
     net = Net(student_n, exer_n, knowledge_n)
@@ -125,12 +120,8 @@ def test_csv(epoch, train_file):
     net = net.to(device)
     net.eval()
 
-    data = []
-
     with open('../config/stu_map.json', encoding='utf8') as i_f:
         stu_map = json.load(i_f)
-    with open('../config/exer_map.json', encoding='utf8') as i_f:
-        exer_map = json.load(i_f)
     with open('../config/knowledge_map.json', encoding='utf8') as i_f:
         knowledge_map = json.load(i_f)
     with open('../config/stu_latest_time_map.json', encoding='utf8') as i_f:
@@ -159,17 +150,21 @@ def test_csv(epoch, train_file):
     output = output.view(-1).tolist()
     # print(len(output))
 
-
-
     json_data = []
     current_student_id = ""
     current_student_scores = dict()
+    total_score = 0
+    average_data = []
+
     for i in range(data_len):
         data[i]['scorePercentage'] = output[i]
         if data[i]['stuUserId'] != current_student_id:
             if 'knowledgeScores' in current_student_scores:
                 json_data.append(current_student_scores)
+                average_score = total_score / len(current_student_scores['knowledgeScores'])
+                average_data.append({'stuUserId': current_student_id, 'averageScore': average_score})
             current_student_scores = dict()
+            total_score = 0
             current_student_id = data[i]['stuUserId']
             current_student_scores['stuUserId'] = data[i]['stuUserId']
             current_student_scores['startDatetime'] = stu_latest_time_map[data[i]['stuUserId']]
@@ -183,8 +178,11 @@ def test_csv(epoch, train_file):
                 'knowledgeTagId': data[i]['knowledgeTagIds'][0],
                 'score': floor(output[i] * 1000) / 1000
             })
+            total_score += output[i]
     if 'knowledgeScores' in current_student_scores:
         json_data.append(current_student_scores)
+        average_score = total_score / len(current_student_scores['knowledgeScores'])
+        average_data.append({'stuUserId': current_student_id, 'averageScore': average_score})
 
     keys = data[0].keys()
     with open('../result/student_knowledge.csv', 'w', newline='') as output_file:
@@ -195,6 +193,12 @@ def test_csv(epoch, train_file):
     with open('../result/student_knowledge.json', 'w') as output_file:
         json.dump(json_data, output_file, indent=4)
 
+    keys = average_data[0].keys()
+    with open('../result/student_average.csv', 'w', newline='') as output_file:
+        dict_writer = csv.DictWriter(output_file, keys)
+        dict_writer.writeheader()
+        dict_writer.writerows(average_data)
+
 
 def load_snapshot(model, filename):
     f = open(filename, 'rb')
@@ -203,12 +207,12 @@ def load_snapshot(model, filename):
 
 
 def get_status(epoch):
-    '''
+    """
     An example of getting student's knowledge status
     :return:
-    '''
-    with open('../config/config.txt') as configFile:
-        student_n, exer_n, knowledge_n = configFile.readline().split(',')
+    """
+    with open('../config/config.txt') as config_file:
+        student_n, exer_n, knowledge_n = config_file.readline().split(',')
     student_n, exer_n, knowledge_n = int(student_n), int(exer_n), int(knowledge_n)
 
     net = Net(student_n, exer_n, knowledge_n)
@@ -221,12 +225,12 @@ def get_status(epoch):
 
 
 def get_exer_params(epoch):
-    '''
+    """
     An example of getting exercise's parameters (knowledge difficulty and exercise discrimination)
     :return:
-    '''
-    with open('../config/config.txt') as configFile:
-        student_n, exer_n, knowledge_n = configFile.readline().split(',')
+    """
+    with open('../config/config.txt') as config_file:
+        student_n, exer_n, knowledge_n = config_file.readline().split(',')
     student_n, exer_n, knowledge_n = int(student_n), int(exer_n), int(knowledge_n)
 
     net = Net(student_n, exer_n, knowledge_n)
@@ -242,34 +246,30 @@ def get_exer_params(epoch):
 
 if __name__ == '__main__':
 
-    with open('../config/config.txt', 'r') as configFile:
-        for i in range(4):
-            configFile.readline()
-        test_file = str(configFile.readline())[:-1]
+    with open('../config/config.txt', 'r') as config:
+        for line in range(4):
+            config.readline()
+        test_file = str(config.readline())[:-1]
     print("predicting: " + test_file)
 
     if len(sys.argv) == 2 and sys.argv[1].isdigit():
         if test_file.endswith('.json'):
             test_default(sys.argv[1], False)
         elif test_file.endswith('.csv'):
-            test_csv(sys.argv[1])
-
+            test_csv(sys.argv[1], test_file)
 
     elif len(sys.argv) == 1:
         if test_file.endswith('.json'):
             test_default('_latest', False)
         elif test_file.endswith('.csv'):
-            test_csv('_latest')
-        # get_status('_latest')
-        # get_exer_params('_latest')
+            test_csv('_latest', test_file)
 
     elif (len(sys.argv) == 2) and (not sys.argv[1].isdigit()):
         print('b')
         test_file = sys.argv[1]
-        test('_latest', True)
+        test('_latest')
         get_status('_latest')
         get_exer_params('_latest')
-
 
     else:
         print('command:\n\tpython predict.py {epoch}\nexample:\n\tpython predict.py 70')
