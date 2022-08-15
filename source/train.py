@@ -146,12 +146,12 @@ def validate(model, section_number, round_number):
     accuracy = correct_count / exer_count
     # compute RMSE
     rmse = np.sqrt(np.mean((label_all - pred_all) ** 2))
-    r2 = r2_score(label_all, pred_all)
-    print('section= %d, epoch= %d, accuracy= %f, rmse= %f, r2 = %f\n' % (
-         section_number + 1, round_number, accuracy, rmse, r2))
+    # r2 = r2_score(label_all, pred_all)
+    print('section= %d, epoch= %d, accuracy= %f, rmse= %f\n' % (
+         section_number + 1, round_number, accuracy, rmse))
     with open('../result/model_val.txt', 'a', encoding='utf8') as f:
-        f.write('section= %d, epoch= %d, accuracy= %f, rmse= %f, r2 = %f\n' % (
-            section_number + 1, round_number, accuracy, rmse, r2))
+        f.write('section= %d, epoch= %d, accuracy= %f, rmse= %f\n' % (
+            section_number + 1, round_number, accuracy, rmse))
 
     return rmse, accuracy
 
