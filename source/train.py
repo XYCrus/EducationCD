@@ -1,3 +1,4 @@
+import json
 import os.path
 import torch
 import torch.nn as nn
@@ -5,11 +6,11 @@ import torch.optim as optim
 import numpy as np
 import sys
 from data_loader import TrainDataLoader, ValTestDataLoader
+from fake_test_generator import FakeTestGenerator
 from model import Net
 from data_loader_csv import TrainDataLoaderCSV
 from data_loader_csv import ValTestDataLoaderCSV
 from predict import test_csv
-from sklearn.metrics import r2_score
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 epoch_n = 5
@@ -31,6 +32,8 @@ def train():
     # loss_function = nn.MSELoss()
     # The score for evaluating a model(epoch), best_performance = accuracy - rmse (Can be changed for better training)
     best_performance = -10.0
+
+    data = FakeTestGenerator.generate(train_file)
 
     for epoch in range(3):
         # data_loader.reset()
@@ -60,16 +63,18 @@ def train():
 
             if section_end_flag:
                 # validate and save current model every epoch
-                rmse, accuracy = validate(net, epoch, data_loader.curr_round - 1)
+                validate(net, epoch, data_loader.curr_round - 1)
+                score_var = validate_average_deviation(net, data)
                 # save_snapshot(net, '../model/model_epoch' + str(epoch + 1))
-                if data_loader.curr_round > 20 and accuracy - rmse > best_performance:
-                    best_performance = accuracy - rmse
+                if data_loader.curr_round > 20 and score_var > best_performance:
+                    best_performance = score_var
                     save_snapshot(net, '../model/model_epoch_latest')
 
-        rmse, accuracy = validate(net, epoch, epoch_n)
+        validate(net, epoch, epoch_n)
+        score_var = validate_average_deviation(net, data)
         # save_snapshot(net, '../model/model_epoch' + str(epoch + 1))
-        if accuracy - rmse > best_performance:
-            best_performance = accuracy - rmse
+        if score_var > best_performance:
+            best_performance = score_var
             save_snapshot(net, '../model/model_epoch_latest')
 
 
@@ -154,6 +159,80 @@ def validate(model, section_number, round_number):
             section_number + 1, round_number, accuracy, rmse))
 
     return rmse, accuracy
+
+
+def validate_average_deviation(model, data):
+    with open('../config/config.txt') as configFile:
+        student_n, exer_n, knowledge_n = configFile.readline().split(',')
+    student_n, exer_n, knowledge_n = int(student_n), int(exer_n), int(knowledge_n)
+    net = Net(student_n, exer_n, knowledge_n)
+    print('validating model...')
+    # data_loader.reset()
+    # load model parameters
+    net.load_state_dict(model.state_dict())
+    net = net.to(torch.device('cpu'))
+    net.eval()
+
+    with open('../config/stu_map.json', encoding='utf8') as i_f:
+        stu_map = json.load(i_f)
+    with open('../config/knowledge_map.json', encoding='utf8') as i_f:
+        knowledge_map = json.load(i_f)
+    with open('../config/stu_latest_time_map.json', encoding='utf8') as i_f:
+        stu_latest_time_map = json.load(i_f)
+
+    data_len = len(data)
+
+    # Load Data
+    input_stu_ids, input_exer_ids, input_knowedge_embs, ys = [], [], [], []
+    for count in range(data_len):
+        log = data[count]
+        knowledge_emb = [0.] * knowledge_n
+        for knowledge_id in log['knowledgeTagIds']:
+            knowledge_emb[knowledge_map[knowledge_id] - 1] = 1.0
+        y = log['scorePercentage']
+        input_stu_ids.append(stu_map[log['stuUserId']] - 1)
+        input_exer_ids.append(log['questionId'] - 1)
+        input_knowedge_embs.append(knowledge_emb)
+        ys.append(y)
+
+    input_stu_ids, input_exer_ids, input_knowledge_embs, ys = torch.LongTensor(input_stu_ids), torch.LongTensor(
+        input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys)
+
+    output = net(input_stu_ids, input_exer_ids, input_knowledge_embs)
+    output = output.view(-1).tolist()
+    net.train()
+    current_student_id = ""
+    current_student_scores = dict()
+    total_score = 0
+    average_data = []
+
+    for i in range(data_len):
+        data[i]['scorePercentage'] = output[i]
+        if data[i]['stuUserId'] != current_student_id:
+            if 'knowledgeScores' in current_student_scores:
+                average_score = total_score / len(current_student_scores['knowledgeScores'])
+                average_data.append(average_score)
+            current_student_scores = dict()
+            total_score = 0
+            current_student_id = data[i]['stuUserId']
+            current_student_scores['stuUserId'] = data[i]['stuUserId']
+            current_student_scores['startDatetime'] = stu_latest_time_map[data[i]['stuUserId']]
+            current_student_scores['knowledgeScores'] = [{
+                'knowledgeTagId': data[i]['knowledgeTagIds'][0],
+                'score': output[i]
+            }]
+        else:
+            current_student_scores['knowledgeScores'].append({
+                'knowledgeTagId': data[i]['knowledgeTagIds'][0],
+                'score': output[i]
+            })
+            total_score += output[i]
+    if 'knowledgeScores' in current_student_scores:
+        average_score = total_score / len(current_student_scores['knowledgeScores'])
+        average_data.append(average_score)
+
+    score_var = np.var(average_data)
+    return score_var
 
 
 def save_snapshot(model, filename):
