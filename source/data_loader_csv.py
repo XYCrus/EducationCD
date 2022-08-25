@@ -10,7 +10,7 @@ class TrainDataLoaderCSV(object):
     data loader for training
     '''
     def __init__(self, file, total_epoch):
-        self.batch_size = 32
+        self.batch_size = 1
         self.ptr = 0
         self.data_file = file
         self.total_epoch = total_epoch
