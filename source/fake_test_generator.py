@@ -1,9 +1,10 @@
 import json
 
-#Program for generating each student with every knowledge, and fake question ids
+# Program for generating each student with every knowledge, and fake question ids
+
 
 class FakeTestGenerator:
-
+    @staticmethod
     def generate(original_file):
         
         with open('../config/stu_map.json', encoding='utf8') as i_f:
@@ -53,4 +54,4 @@ class FakeTestGenerator:
                     fake_exer_id += 1
                 fake_exer_id = new_start
         
-        return fake_train    
+        return fake_train
