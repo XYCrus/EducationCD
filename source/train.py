@@ -13,12 +13,7 @@ from data_loader_csv import TrainDataLoaderCSV
 from data_loader_csv import ValTestDataLoaderCSV
 from predict import test_csv
 
-<<<<<<< source/train.py
-
-device = torch.device(('cuda:0') if torch.cuda.is_available() else 'cpu')
-=======
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
->>>>>>> source/train.py
 epoch_n = 5
 train_file = '../data/train_set_transformed.json'
 
