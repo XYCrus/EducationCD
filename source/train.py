@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import sys
+from get_average import GetAverage
 from data_loader import TrainDataLoader, ValTestDataLoader
 from fake_test_generator import FakeTestGenerator
 from model import Net
@@ -12,7 +13,12 @@ from data_loader_csv import TrainDataLoaderCSV
 from data_loader_csv import ValTestDataLoaderCSV
 from predict import test_csv
 
+<<<<<<< source/train.py
+
+device = torch.device(('cuda:0') if torch.cuda.is_available() else 'cpu')
+=======
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+>>>>>>> source/train.py
 epoch_n = 5
 train_file = '../data/train_set_transformed.json'
 
@@ -57,8 +63,8 @@ def train():
             net.apply_clipper()
 
             running_loss += loss.item()
-            if batch_count % 200 == 199:
-                print('[%d, %5d] loss: %.3f' % (epoch + 1, batch_count + 1, running_loss / 200))
+            if batch_count % 5000 == 4999:
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, batch_count + 1, running_loss / 5000))
                 running_loss = 0.0
 
             if section_end_flag:
@@ -290,3 +296,4 @@ if __name__ == '__main__':
 
     print("predicting: " + train_file)
     test_csv('_latest', train_file)
+    GetAverage.getAverage()

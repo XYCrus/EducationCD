@@ -22,7 +22,7 @@ class TrainDataLoaderCSV(object):
     """
 
     def __init__(self, file, total_epoch):
-        self.batch_size = 32
+        self.batch_size = 1
         self.ptr = 0
         self.data_file = file
         self.total_epoch = 3  # number of dividing sets, hard coded
