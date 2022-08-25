@@ -5,11 +5,13 @@ import torch.optim as optim
 import numpy as np
 import json
 import sys
+from get_average import GetAverage
 from data_loader import TrainDataLoader, ValTestDataLoader
 from model import Net
 from data_loader_csv import TrainDataLoaderCSV
 from data_loader_csv import ValTestDataLoaderCSV
 from predict import test_csv
+
 
 device = torch.device(('cuda:0') if torch.cuda.is_available() else 'cpu')
 epoch_n = 5
@@ -231,3 +233,4 @@ if __name__ == '__main__':
 
     print("predicting: " + train_file)
     test_csv('_latest', train_file)
+    GetAverage.getAverage()
