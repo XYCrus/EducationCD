@@ -52,8 +52,8 @@ def train():
             net.apply_clipper()
 
             running_loss += loss.item()
-            if batch_count % 200 == 199:
-                print('[%d, %5d] loss: %.3f' % (epoch + 1, batch_count + 1, running_loss / 200))
+            if batch_count % 5000 == 4999:
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, batch_count + 1, running_loss / 5000))
                 running_loss = 0.0
 
         # validate and save current model every epoch
