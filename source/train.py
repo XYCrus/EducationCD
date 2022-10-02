@@ -18,7 +18,7 @@ epoch_n = 5
 train_file = '../data/train_set_transformed.json'
 
 
-def train():
+def train(load_file = None):
     if train_file.endswith('.json'):
         data_loader = TrainDataLoader(train_file)
     else:
@@ -27,7 +27,10 @@ def train():
     knowledge_n = data_loader.knowledge_n
     student_n = data_loader.student_n
     net = Net(student_n, exer_n, knowledge_n)
-    net = net.to(device)
+    if (load_file != None):
+        net.load_state_dict(torch.load(load_file))
+        net = net.to(device)
+        net.eval()
     optimizer = optim.Adam(net.parameters(), lr=0.002)
     print('training model...')
     # loss_function = nn.MSELoss()
@@ -237,9 +240,7 @@ def validate_average_deviation(model, data):
 
 
 def save_snapshot(model, filename):
-    f = open(filename, 'wb')
-    torch.save(model.state_dict(), f)
-    f.close()
+    torch.save(model.state_dict(), filename)
 
 
 def calculate_loss(output, target, question_types):
@@ -274,20 +275,27 @@ def check_folder():
 
 
 if __name__ == '__main__':
-    if (len(sys.argv) != 4) or ((sys.argv[2] != 'cpu') and ('cuda:' not in sys.argv[2])) or (not sys.argv[3].isdigit()):
+    if ((sys.argv[-2] != 'cpu') and ('cuda:' not in sys.argv[2])) or (not sys.argv[-1].isdigit()):
         print('command:\n\tpython train.py {file} {device} {epoch}\nexample:\n\tpython train.py xxx.json cuda:0 70')
         exit(1)
     else:
-        train_file = sys.argv[1]
-        if not train_file.endswith('.csv') and not train_file.endswith('.json'):
-            print('wrong file type')
-            exit(1)
-        device = torch.device(sys.argv[2])
-        epoch_n = int(sys.argv[3])
-        epoch_n = max(20, epoch_n)
+            train_file = sys.argv[1]
+            if not train_file.endswith('.csv') and not train_file.endswith('.json'):
+                print('wrong file type')
+                exit(1)
+            device = torch.device(sys.argv[-2])
+            epoch_n = int(sys.argv[-1])
+            # epoch_n = max(20, epoch_n)
 
     check_folder()
-    train()
+    if (len(sys.argv) == 4):
+        train()
+    elif (len(sys.argv) == 5):
+        load_file = '../model/' + sys.argv[2]
+        train(load_file)
+    else:
+        print('command:\n\tpython train.py {file} {device} {epoch}\nexample:\n\tpython train.py xxx.json cuda:0 70')
+        exit(1)
 
     print("predicting: " + train_file)
     test_csv('_latest', train_file)
