@@ -1,3 +1,4 @@
+import string
 import sys
 import os.path
 import pandas as pd
@@ -42,10 +43,28 @@ def get_summary(df, stu_id):
     return avg_scores, count_0, count_1, single_apr, complex_apr
 
 def extract_stu_klg(model):
+    # save as csv file
     stu_klg = pd.DataFrame(model, columns=['knowledge_ids', 'score_rate'])
     stu_klg.to_csv("../result/student_knowledge.csv")
 
-def create_statistic_model(datapath):
+def extract_stu_klg_json(json_data):
+    with open("../result/student_knowledge_sta.json", "w") as outfile:
+        json.dump(json_data, outfile, indent=4)
+
+def extract_stu_avg(model: pd.DataFrame):
+    grouped = model['score_rate'].groupby('stu_user_id').mean()
+    model['stu_avg'] = grouped 
+    stu_avg_dict = dict(grouped)
+    with open("../result/stu_avg.json", "w") as outfile:
+        json.dump(stu_avg_dict, outfile, indent=4)
+
+def extract_overall_avg(model: pd.DataFrame):
+    overall_avg = np.mean(model['score_rate'])
+    model['overall_avg'] = overall_avg
+    with open("../result/overall_avg.json", "w") as outfile:
+        outfile.write(json.dumps(overall_avg))
+
+def create_statistic_model(datapath: string):
     # load data
     df = pd.read_csv(datapath)
 
@@ -66,24 +85,46 @@ def create_statistic_model(datapath):
     data = {'stu_user_id': np.array(stu_col), 'knowledge_ids': np.array(klg_col)}
     model = pd.DataFrame(data=data)
 
-    # build remaining column
+    # build remaining column and json data
+
+    json_data = []
 
     ## initialization
     stu = model['stu_user_id'].iloc[0]
     summary = get_summary(df, stu)
     klg = model['knowledge_ids'].iloc[0]
 
+    ### record info into cols
     avg_score_col = [summary[0][klg]]
     col_0 = [summary[1][klg]]
     col_1 = [summary[2][klg]]
     col_sing = [summary[3][klg]]
     col_comp = [summary[4][klg]]
 
+    ### record info into json data
+    current_student_scores = {"stuUserId": str(stu)}
+    knowledgScores = []
+    avg_scores = summary[0]
+    for (key, val) in avg_scores.items():
+        knowledgScores.append({"knowledgeTagId": key, "score": val})
+    current_student_scores["knowledgScores"] = knowledgScores
+    json_data.append(current_student_scores)
+
     ## loop
     for i in range(1, model.shape[0]):
         stu = model['stu_user_id'].iloc[i]
+
         if stu != model['stu_user_id'].iloc[i-1]: # need to change summary
             summary = get_summary(df, stu)
+            ### record json data
+            current_student_scores = {"stuUserId": str(stu)}
+            knowledgScores = []
+            avg_scores = summary[0]
+            for (key, val) in avg_scores.items():
+                knowledgScores.append({"knowledgeTagId": key, "score": val})
+            current_student_scores["knowledgScores"] = knowledgScores
+            json_data.append(current_student_scores)
+
         klg = model['knowledge_ids'].iloc[i]
         avg_score_col.append(summary[0][klg])
         col_0.append(summary[1][klg])
@@ -91,6 +132,7 @@ def create_statistic_model(datapath):
         col_sing.append(summary[3][klg])
         col_comp.append(summary[4][klg])
 
+    ## build columns
     model['score_rate'] = np.array(avg_score_col)
     model['1_score_count'] = np.array(col_1)
     model['0_score_count'] = np.array(col_0)
@@ -103,13 +145,16 @@ def create_statistic_model(datapath):
     for i in range(model.shape[0]):
         model['knowledge_ids'].iloc[i] = json.dumps([model['knowledge_ids'].iloc[i]])
 
-    #print(model)
+    # generate student_knowledge file, csv & json
+    extract_stu_klg(model)
+    extract_stu_klg_json(json_data)
+    # calculate per student average, write into json
+    extract_stu_avg(model)
+    # calculate overall average, write into json
+    extract_overall_avg(model)
 
     # save the dataframe to file
     model.to_csv("../model/model.csv")
-
-    # generate student_knowledge file
-    extract_stu_klg(model)
 
 def check_folder():
     if not os.path.exists('../config'):
