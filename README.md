@@ -1,5 +1,5 @@
 -- Deep learnring
-python train.py source.csv cpu 1
+python train.py source.csv cpu epoch_number batch_number
 python predict.py 
 
 --statist model
