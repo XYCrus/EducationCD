@@ -1,7 +1,9 @@
 import sys
 import pandas as pd
+import numpy as np
 import datetime
 import json
+import os
 
 
 def collect_pairs(datapath):
@@ -15,11 +17,54 @@ def collect_pairs(datapath):
     return pair_set
 
 
-def build_dataset(datapath, wholedata_path, n=3):
-    # n: number of records to find for each missing pair
+def build_latest(wholedata_path, n=3):
+    # n: number of latest exams to select
 
     wholedata = pd.read_csv(wholedata_path)
-    data = pd.read_csv(datapath)
+
+    # check the number of exams
+    exam_count = wholedata['startDatetime'].unique()
+    if exam_count <= n:
+        wholedata.to_csv("../model/latest_dataset.csv")
+    else: 
+        # pick the dates of last n exams
+        wholedata['startDatetime'] = wholedata['startDatetime'].apply(lambda x: datetime.datetime.strptime(x,'%m/%d/%y %H:%M'))
+        exam_dates = np.sort(wholedata['startDatetime'].unique())
+        latest_dates = exam_dates[-n:]
+        # pick the data where dates in the last dates
+        latest = wholedata[wholedata['startDatetime'].isin(latest_dates)]
+        # write into file
+        latest.to_csv("../model/latest_dataset.csv")
+
+
+def build_dataset(wholedata_path, n_latest = 3, n_fill = 3):
+    # n_latest: number of latest exams to select
+    # n_fill: number of records to find for each missing pair
+
+    # build latest dataset
+
+    wholedata = pd.read_csv(wholedata_path)
+    datapath = "../model/latest_dataset.csv" #path for latest dataset
+
+    ## check the number of exams
+    ### if < n_latest, only create latest dataset
+    exam_count = wholedata['startDatetime'].unique().size
+    if exam_count <= n_latest:
+        wholedata.to_csv("../model/latest_dataset.csv")
+        return None
+
+    ### elif > n_latest, create both latest dataset and knowledge dataset 
+    ## pick the dates of last n exams
+    wholedata['startDatetime'] = wholedata['startDatetime'].apply(lambda x: datetime.datetime.strptime(x,'%m/%d/%y %H:%M'))
+    exam_dates = np.sort(wholedata['startDatetime'].unique())
+    latest_dates = exam_dates[-n_latest:]
+    # pick the data where dates in the last dates
+    latest = wholedata[wholedata['startDatetime'].isin(latest_dates)]
+    # write into file
+    latest.to_csv(datapath)
+
+    # build knowledge dataset
+    data = latest
     
     # flag the current data as 1
     data['flag'] = 1
@@ -28,7 +73,6 @@ def build_dataset(datapath, wholedata_path, n=3):
     pairs = collect_pairs(wholedata_path) - collect_pairs(datapath)
 
     # sort the wholedataset by exam time
-    wholedata['startDatetime'] = wholedata['startDatetime'].apply(lambda x: datetime.datetime.strptime(x,'%m/%d/%y %H:%M'))
     wholedata = wholedata.sort_values(by = 'startDatetime', ascending=False)
 
     # iterate the wholedataset, recording indices of single and complex appearances of each pair in pairs
@@ -45,7 +89,7 @@ def build_dataset(datapath, wholedata_path, n=3):
                 if len(klgs) == 1:
                     single[pair].append(wholedata.index[i])
                     ## the pair is no longer interested if n single appearance records have been collected
-                    if len(single[pair]) == n: 
+                    if len(single[pair]) == n_fill: 
                         pairs.discard(pair)
                 else:
                     complex[pair].append(wholedata.index[i])
@@ -59,7 +103,7 @@ def build_dataset(datapath, wholedata_path, n=3):
     pairs = single.keys()
     for pair in pairs:
         record = single[pair]
-        while len(record) < n:
+        while len(record) < n_fill:
             if complex[pair]:
                 record.append(complex[pair].pop(0))
             else:
@@ -78,9 +122,13 @@ def build_dataset(datapath, wholedata_path, n=3):
     newdata['flag'] = 0
     data = data.append(newdata)
 
-    # write into file latest_234+.csv
-    data.to_csv("../data/latest_234+.csv")
+    # write into csv file
+    data.to_csv("../model/knowledge_dataset.csv")
 
+
+def check_folder():
+    if not os.path.exists('../model'):
+        os.mkdir('../model')
 
 
 if __name__ == '__main__':
@@ -88,13 +136,16 @@ if __name__ == '__main__':
     # read in and record parameters
 
     # the first component of the string typed
-    data_file = sys.argv[1]
-    wholedata_file = sys.argv[2]
-    if not (data_file.endswith('.csv') and wholedata_file.endswith('.csv')):
+    wholedata_file = sys.argv[1]
+    if not (wholedata_file.endswith('.csv')):
         print('wrong file type')
         exit(1)
     
-    if len(sys.argv) == 4:
-        n = sys.argv[3]
+    if len(sys.argv) >= 3:
+        n_latest = sys.argv[2]
+    
+    if len(sys.argv) >= 4:
+        n_fill = sys.argv[3]
 
-    build_dataset(data_file, wholedata_file, n=3)
+    check_folder()
+    build_dataset(wholedata_file, n_latest=3, n_fill=3)

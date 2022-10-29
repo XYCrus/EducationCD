@@ -48,7 +48,7 @@ def extract_stu_klg(model):
     stu_klg.to_csv("../result/student_knowledge.csv")
 
 def extract_stu_klg_json(json_data):
-    with open("../result/student_knowledge_sta.json", "w") as outfile:
+    with open("../result/student_knowledge_statistics.json", "w") as outfile:
         json.dump(json_data, outfile, indent=4)
 
 def extract_stu_avg(model: pd.DataFrame):
