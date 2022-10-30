@@ -109,17 +109,18 @@ def test_default(epoch, have_input_file):
 
 
 def test_csv(epoch, train_file):
+    # load basic information of data
     with open('../config/config.txt') as config_file:
         student_n, exer_n, knowledge_n = config_file.readline().split(',')
     student_n, exer_n, knowledge_n = int(student_n), int(exer_n), int(knowledge_n)
-
+    # load the model
     net = Net(student_n, exer_n, knowledge_n)
     device = torch.device('cpu')
     print('testing model...')
-    load_snapshot(net, '../model/model_epoch' + str(epoch))
+    load_snapshot(net, '../model/model_epoch' + str(epoch) + '.pth')
     net = net.to(device)
-    net.eval()
-
+    net.eval() # 把model的模式调到eval（相对于train）
+    # load students and knowledge
     with open('../config/stu_map.json', encoding='utf8') as i_f:
         stu_map = json.load(i_f)
     with open('../config/knowledge_map.json', encoding='utf8') as i_f:
@@ -127,10 +128,13 @@ def test_csv(epoch, train_file):
     with open('../config/stu_latest_time_map.json', encoding='utf8') as i_f:
         stu_latest_time_map = json.load(i_f)
 
+    # load fake data for predicting proficiencies
+    # the unseen knowledge should be added in the fake data set to crash the program
+    """
     data = FakeTestGenerator.generate(train_file)
     data_len = len(data)
 
-    # Load Data
+    # Load Data (fake data)
     input_stu_ids, input_exer_ids, input_knowedge_embs, ys = [], [], [], []
     for count in range(data_len):
         log = data[count]
@@ -143,26 +147,51 @@ def test_csv(epoch, train_file):
         input_knowedge_embs.append(knowledge_emb)
         ys.append(y)
 
+    #modified
+    """
+    data = FakeTestGenerator.generate2(train_file)
+    data_len = len(data)
+    with open('../config/exer_map.json', encoding='utf8') as i_f:
+            exer_map = json.load(i_f)
+    # Load Data (fake data)
+    input_stu_ids, input_exer_ids, input_knowedge_embs, ys = [], [], [], []
+    for count in range(int(data_len)):
+        log = data[count]
+        knowledge_emb = [0.] * knowledge_n
+        for knowledge_id in json.loads(log['knowledgeTagIds']):
+            
+            knowledge_emb[knowledge_map[knowledge_id] - 1] = 1.0
+        y = log['scorePercentage_pre']
+        input_stu_ids.append(stu_map[log['stuUserId']] - 1)
+        input_exer_ids.append(exer_map[log['questionId']] - 1)
+        input_knowedge_embs.append(knowledge_emb)
+        ys.append(float(y))
+    
+
+
     input_stu_ids, input_exer_ids, input_knowledge_embs, ys = torch.LongTensor(input_stu_ids), torch.LongTensor(
         input_exer_ids), torch.Tensor(input_knowedge_embs), torch.Tensor(ys)
 
+    # predict the outcome of fake data
     output = net(input_stu_ids, input_exer_ids, input_knowledge_embs)
     output = output.view(-1).tolist()
     # print(len(output))
 
-    json_data = []
+    json_data = [] # to record predicted student proficiencies
     current_student_id = ""
     current_student_scores = dict()
-    total_score = 0
-    average_data = []
+    total_score = 0 # to collect the sum of predicted score
+    average_data = [] # to record predicted average proficiency of each student
 
     for i in range(data_len):
-        data[i]['scorePercentage'] = output[i]
+        # change the score from default -1 to predict output
+        data[i]['scorePercentage_pre'] = output[i]
         if data[i]['stuUserId'] != current_student_id:
             if 'knowledgeScores' in current_student_scores:
                 json_data.append(current_student_scores)
                 average_score = total_score / len(current_student_scores['knowledgeScores'])
                 average_data.append({'stuUserId': current_student_id, 'averageScore': average_score})
+            # re-initialize to collect data of the next student
             current_student_scores = dict()
             total_score = 0
             current_student_id = data[i]['stuUserId']
@@ -176,23 +205,27 @@ def test_csv(epoch, train_file):
         else:
             current_student_scores['knowledgeScores'].append({
                 'knowledgeTagId': data[i]['knowledgeTagIds'][0],
-                'score': floor(output[i] * 1000) / 1000
+                'score': floor(output[i] * 1000) / 1000 # 保留三位小数
             })
             total_score += output[i]
+    # to record the information of the last student
     if 'knowledgeScores' in current_student_scores:
         json_data.append(current_student_scores)
         average_score = total_score / len(current_student_scores['knowledgeScores'])
         average_data.append({'stuUserId': current_student_id, 'averageScore': average_score})
 
+    # write the predicted outcomes (students' proficiencies in each knowledge) to result/student_knowledge.csv
     keys = data[0].keys()
     with open('../result/student_knowledge.csv', 'w', newline='') as output_file:
         dict_writer = csv.DictWriter(output_file, keys)
         dict_writer.writeheader()
         dict_writer.writerows(data)
 
+    # dump the predicted outcomes to json file
     with open('../result/student_knowledge.json', 'w') as output_file:
         json.dump(json_data, output_file, indent=4)
 
+    # write the predicted average proficiency of students to student_average.csv
     keys = average_data[0].keys()
     with open('../result/student_average.csv', 'w', newline='') as output_file:
         dict_writer = csv.DictWriter(output_file, keys)

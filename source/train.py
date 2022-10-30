@@ -91,7 +91,7 @@ def train(load_file = None):
                 # save_snapshot(net, '../model/model_epoch' + str(epoch + 1))
                 if data_loader.curr_round > 20 and score_var > best_performance:
                     best_performance = score_var
-                    save_snapshot(net, '../model/model_epoch_latest')
+                    save_snapshot(net, '../model/model_epoch_latest.pth')
 
         # validate at the end of each epoch
         score_val = validate(net, epoch, epoch_n)[0]
@@ -99,7 +99,7 @@ def train(load_file = None):
         # save_snapshot(net, '../model/model_epoch' + str(epoch + 1))
         if score_var > best_performance:
             best_performance = score_var
-            save_snapshot(net, '../model/model_epoch_latest')
+            save_snapshot(net, '../model/model_epoch_latest.pth')
 
 
 def validate(model, section_number, round_number):
