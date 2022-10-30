@@ -48,7 +48,7 @@ def extract_stu_klg(model):
     # save as csv file
     stu_klg = pd.DataFrame(model, columns=['stu_user_id','knowledge_ids', 'score_rate'])
     stu_klg = stu_klg.set_index("stu_user_id", drop=True)
-    stu_klg.to_csv("../result/student_knowledge.csv")
+    stu_klg.to_csv("../result/student_knowledge_statistics.csv")
 
 
 def extract_stu_klg_json(json_data):
@@ -89,9 +89,13 @@ def extract_klg_avg(model: pd.DataFrame):
     klg_avg_dict = dict(klg1_score, **klg0_score)
     model['klg_avg'] = model['knowledge_ids'].apply(lambda x: klg_avg_dict[x])
 
-    with open("../result/klg_avg.json", "w") as outfile:
+    with open("../result/knowledge_average.json", "w") as outfile:
         json.dump(klg_avg_dict, outfile, indent=4)
     
+
+    with open("../model/knowledge_average.json", "w") as outfile:
+        json.dump(klg_avg_dict, outfile, indent=4)
+
     return model
 
 
@@ -124,9 +128,12 @@ def extract_stu_avg(model: pd.DataFrame):
     
     model['stu_avg'] = model['stu_user_id'].apply(lambda x: stu_score[x])
     
-    with open("../result/stu_avg.json", "w") as outfile:
+    with open("../result/student_average.json", "w") as outfile:
         json.dump(stu_score, outfile, indent=4)
         
+    with open("../model/student_average.json", "w") as outfile:
+        json.dump(stu_score, outfile, indent=4)
+
     return model
 
 
