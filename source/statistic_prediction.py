@@ -1,15 +1,21 @@
-# SY Hong
-# Time:10/15/2022 2:08 PM
+
 import sys
 import pandas as pd
 import numpy as np
 import json
 import os.path
 
-overall_avg_path="../result/overall_avg.json"
-stu_avg_path="../result/stu_avg.json"
+
+stu_avg_path = "../result/student_average.json"
+klg_avg_path= "../result/knowledge_average.json"
+# model_name="/model.csv"
+# prediction_set_name="/prediction_set"
+
 def create_df_and_set(model_path, prediction_set_path):
-    model_df = pd.read_csv(model_path).iloc[:, 0:4]
+    model_df = pd.read_csv(model_path).iloc[:, 0:3]
+    stu_set = set(list(model_df["stu_user_id"]))
+    klg_set = set(list(model_df["knowledge_ids"]))
+    model_df = model_df.set_index(['stu_user_id', 'knowledge_ids'])
     pred_df = pd.read_csv(prediction_set_path)
     pred_df_copy = pred_df[["stuUserId", "examinationId", "questionType", "knowledgeTagIds", "scorePercentage"]].copy()
     # record splited klg
@@ -27,35 +33,32 @@ def create_df_and_set(model_path, prediction_set_path):
     # record of prediction
     pred_df_copy["pred_before_mapping"] = None
     pred_df_copy["pred_after_mapping"] = None
-    stu_set = set(list(model_df["stu_user_id"]))
-    klg_set = set(list(model_df["knowledge_ids"]))
     return model_df, pred_df_copy, stu_set, klg_set
 
 
 # score of a specified student's knowledge
-def get_avg_score_of_stu_klg(df: pd.DataFrame, stu_user_id: int, knowledge_id: int):
-    for i in range(len(df)):
-        if df["stu_user_id"].iloc[i] == stu_user_id and df["knowledge_ids"].iloc[i] == knowledge_id:
-            return df["score_rate"].iloc[i]
-
-
+def get_avg_score_of_stu_klg(df: pd.DataFrame, stu_user_id: int, knowledge_id):
+    res = df.loc[(stu_user_id, knowledge_id)]
+    score=res.values[0][0]
+    return score
 # average score of a student in previous month
-def get_avg_score_of_stu(df: pd.DataFrame):
-    mean = df["score_rate"].groupby(df["stu_user_id"]).mean()
-    stu_avg_dict = dict(mean)
-    return stu_avg_dict
+# def get_avg_score_of_stu(df: pd.DataFrame):
+#     mean = df["score_rate"].groupby(df["stu_user_id"]).mean()
+#     stu_avg_dict = dict(mean)
+#     return stu_avg_dict
 
 
 # average score of knowledge in previous month
-def get_avg_score_of_klg(df: pd.DataFrame):
-    mean = df["score_rate"].groupby(df["knowledge_ids"]).mean()
-    klg_avg_dict = dict(mean)
-    return klg_avg_dict
+# def get_avg_score_of_klg(df: pd.DataFrame):
+#     mean = df["score_rate"].groupby(df["knowledge_ids"]).mean()
+#     klg_avg_dict = dict(mean)
+#     return klg_avg_dict
 
 
 # average score of all students
 def get_total_avg_score(df: pd.DataFrame):
     return np.mean(df["score_rate"])
+
 
 def check_folder():
     if not os.path.exists('../config'):
@@ -71,24 +74,23 @@ if __name__ == '__main__':
     # read in and record parameters
     check_folder()
     # the first component of the string typed
-    model_path=sys.argv[1]
-    prediction_set_path=sys.argv[2]
+    model_path = sys.argv[1]
+    prediction_set_path = sys.argv[2]
     if not (model_path.endswith('.csv') and prediction_set_path.endswith('.csv')):
         print('wrong file type')
         exit(1)
-    #get all df needed
-    df_res=create_df_and_set(model_path, prediction_set_path)
+    # get all df needed
+    df_res = create_df_and_set(model_path, prediction_set_path)
     model_df = df_res[0]
     pred_df_copy = df_res[1]
     stu_set = df_res[2]
     klg_set = df_res[3]
-    #total_avg = get_total_avg_score(model_df)
-    total_avg = json.load(open(overall_avg_path, 'r', encoding="utf-8"))
-    #stu_avg_dict = get_avg_score_of_stu(model_df)
+    # total_avg = get_total_avg_score(model_df)
+    total_avg=0.5
     stu_avg_dict = json.load(open(stu_avg_path, 'r', encoding="utf-8"))
     stu_avg_dict = {int(key): value for key, value in stu_avg_dict.items()}
-    klg_avg_dict = get_avg_score_of_klg(model_df)
-
+    klg_avg_dict = json.load(open(klg_avg_path, 'r', encoding="utf-8"))
+    klg_avg_dict = {int(key): value for key, value in klg_avg_dict.items()}
     # split knowledge
     for i in range(pred_df_copy.shape[0]):
         knowledges = json.loads(pred_df_copy['knowledgeTagIds'].iloc[i])
@@ -119,7 +121,6 @@ if __name__ == '__main__':
         elif num_of_known_klg == 0:
             pred_df_copy.loc[i, "klg_flag"] = 0
             pred_df_copy.loc[i, "half_klg_flag"] = 0
-
     # prediction
     for i in range(pred_df_copy.shape[0]):
         stu_user_id = pred_df_copy["stuUserId"].iloc[i]
@@ -228,7 +229,6 @@ if __name__ == '__main__':
         for key2, value2 in all_type_count.items():
             if key1 == key2:
                 all_type_mse[key1] = value1 / value2
-
 
 print(accuracy)
 print(mse)
