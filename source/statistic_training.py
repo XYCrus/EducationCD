@@ -58,36 +58,40 @@ def extract_stu_klg_json(json_data):
 
 
 def extract_klg_avg(model: pd.DataFrame):
-    # averaging only over flag == 1 if the klg exists in flag == 1
-    # otherwise, use data where flag == 0
-    klg1_score = {}
-    klg1_count = {}
-    klg0_score = {}
-    klg0_count = {}
-
-    df1 = model[model['flag'] == 1]
-    for i in range(df1.shape[0]):
-        klg = df1['knowledge_ids'].iloc[i]
-        score = df1['score_rate'].iloc[i]
-        count = df1['total_count'].iloc[i]
-        klg1_score[klg] = klg1_score.get(klg,0) + score*count
-        klg1_count[klg] = klg1_score.get(klg,0) + count
-    for key in klg1_count.keys():
-        klg1_score[key] = klg1_score[key] / klg1_count[key]
-
-    df0 = model[model['flag'] == 0]
-    for i in range(df0.shape[0]):
-        klg = df0['knowledge_ids'].iloc[i]
-        if klg not in klg1_count.keys():
-            score = df0['score_rate'].iloc[i]
-            count = df0['total_count'].iloc[i]
-            klg0_score[klg] = klg0_score.get(klg,0) + score*count
-            klg0_count[klg] = klg0_score.get(klg,0) + count
-    for key in klg0_count.keys():
-        klg0_score[key] = klg0_score[key] / klg0_count[key]
+    df = model.copy()
+    df = df.set_index('knowledge_ids',drop=False)
+    grouped = df['score_rate'].groupby('knowledge_ids').mean()
+    model['klg_avg'] = model['knowledge_ids'].apply(lambda x: grouped.loc[x])
+    klg_avg_dict = dict(grouped)
     
-    klg_avg_dict = dict(klg1_score, **klg0_score)
-    model['klg_avg'] = model['knowledge_ids'].apply(lambda x: klg_avg_dict[x])
+    # klg1_score = {}
+    # klg1_count = {}
+    # klg0_score = {}
+    # klg0_count = {}
+
+    # df1 = model[model['flag'] == 1]
+    # for i in range(df1.shape[0]):
+    #     klg = df1['knowledge_ids'].iloc[i]
+    #     score = df1['score_rate'].iloc[i]
+    #     count = df1['total_count'].iloc[i]
+    #     klg1_score[klg] = klg1_score.get(klg,0) + score*count
+    #     klg1_count[klg] = klg1_score.get(klg,0) + count
+    # for key in klg1_count.keys():
+    #     klg1_score[key] = klg1_score[key] / klg1_count[key]
+
+    # df0 = model[model['flag'] == 0]
+    # for i in range(df0.shape[0]):
+    #     klg = df0['knowledge_ids'].iloc[i]
+    #     if klg not in klg1_count.keys():
+    #         score = df0['score_rate'].iloc[i]
+    #         count = df0['total_count'].iloc[i]
+    #         klg0_score[klg] = klg0_score.get(klg,0) + score*count
+    #         klg0_count[klg] = klg0_score.get(klg,0) + count
+    # for key in klg0_count.keys():
+    #     klg0_score[key] = klg0_score[key] / klg0_count[key]
+    
+    # klg_avg_dict = dict(klg1_score, **klg0_score)
+    # model['klg_avg'] = model['knowledge_ids'].apply(lambda x: klg_avg_dict[x])
 
     with open("../result/knowledge_average.json", "w") as outfile:
         json.dump(klg_avg_dict, outfile, indent=4)
@@ -100,33 +104,37 @@ def extract_klg_avg(model: pd.DataFrame):
 
 
 def extract_stu_avg(model: pd.DataFrame):
-    # averaging only over flag == 1 if the klg exists in flag == 1
-    # otherwise, use data where flag == 0
-    stu_score = {}
-    stu_count = {}
-    stu_flag = {}
-
-    df1 = model[model['flag'] == 1]
-    for i in range(df1.shape[0]):
-        stu = int(df1['stu_user_id'].iloc[i])
-        score = df1['score_rate'].iloc[i]
-        count = df1['total_count'].iloc[i]
-        stu_score[stu] = stu_score.get(stu,0) + score*count
-        stu_count[stu] = stu_score.get(stu,0) + count
-        stu_flag[stu] = 1
-
-    df0 = model[model['flag'] == 0]
-    for i in range(df0.shape[0]):
-        stu = int(df0['stu_user_id'].iloc[i])
-        if not stu_flag.get(stu,0):
-            score = df0['score_rate'].iloc[i]
-            count = df0['total_count'].iloc[i]
-            stu_score[stu] = stu_score.get(stu,0) + score*count
-            stu_count[stu] = stu_score.get(stu,0) + count
-    for key in stu_count.keys():
-        stu_score[key] = stu_score[key] / stu_count[key]
+    df = model.copy()
+    df = df.set_index('stu_user_id',drop=False)
+    grouped = df['score_rate'].groupby('stu_user_id').mean()
+    model['stu_avg'] = model['stu_user_id'].apply(lambda x: grouped.loc[x])
+    stu_score = dict(grouped)
     
-    model['stu_avg'] = model['stu_user_id'].apply(lambda x: stu_score[x])
+    # stu_score = {}
+    # stu_count = {}
+    # stu_flag = {}
+
+    # df1 = model[model['flag'] == 1]
+    # for i in range(df1.shape[0]):
+    #     stu = int(df1['stu_user_id'].iloc[i])
+    #     score = df1['score_rate'].iloc[i]
+    #     count = df1['total_count'].iloc[i]
+    #     stu_score[stu] = stu_score.get(stu,0) + score*count
+    #     stu_count[stu] = stu_score.get(stu,0) + count
+    #     stu_flag[stu] = 1
+
+    # df0 = model[model['flag'] == 0]
+    # for i in range(df0.shape[0]):
+    #     stu = int(df0['stu_user_id'].iloc[i])
+    #     if not stu_flag.get(stu,0):
+    #         score = df0['score_rate'].iloc[i]
+    #         count = df0['total_count'].iloc[i]
+    #         stu_score[stu] = stu_score.get(stu,0) + score*count
+    #         stu_count[stu] = stu_score.get(stu,0) + count
+    # for key in stu_count.keys():
+    #     stu_score[key] = stu_score[key] / stu_count[key]
+    
+    # model['stu_avg'] = model['stu_user_id'].apply(lambda x: stu_score[x])
     
     with open("../result/student_average.json", "w") as outfile:
         json.dump(stu_score, outfile, indent=4)
@@ -311,6 +319,9 @@ def create_statistic_model(datapath: string):
     # calculate klg average, write into json
     model = extract_klg_avg(model)
 
+    # calculate per student average, write into json
+    model = extract_stu_avg(model)
+
     # format the knowledge id as json 
     for i in range(model.shape[0]):
         model['knowledge_ids'].iloc[i] = json.dumps([model['knowledge_ids'].iloc[i]])
@@ -318,9 +329,6 @@ def create_statistic_model(datapath: string):
     # generate student_knowledge file, csv & json
     extract_stu_klg(model)
     extract_stu_klg_json(json_data)
-
-    # calculate per student average, write into json
-    model = extract_stu_avg(model)
 
     # set the index as stu id
     model = model.set_index("stu_user_id", drop=True)

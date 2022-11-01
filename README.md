@@ -5,7 +5,7 @@ The column scorePercentage_pre of result/student_knowledge.csv is the prediction
 python predict.py 
 
 --statist model
-python statistic_training.py ../data/latest_234.csv
+python statistic_training.py ../model/knowledge_dataset.csv
 python statistic_prediction.py ../model/model.csv ../data/prediction_set.csv
 
 
