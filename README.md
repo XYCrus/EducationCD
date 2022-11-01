@@ -5,7 +5,7 @@ python train.py source.csv cpu epoch_number batch_number
 
 python predict.py 
 
-# --Statist Model
+# -- Statist Model
 
 python build_knowledge_dataset.py ../data/wholedata.csv
 
