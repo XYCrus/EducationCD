@@ -6,13 +6,12 @@ import json
 import os.path
 
 
-stu_avg_path = "../result/student_average.json"
-klg_avg_path= "../result/knowledge_average.json"
-# model_name="/model.csv"
-# prediction_set_name="/prediction_set"
+stu_avg_name = "/student_average.json"
+klg_avg_name= "/knowledge_average.json"
+model_name = "/model.csv"
 
 def create_df_and_set(model_path, prediction_set_path):
-    model_df = pd.read_csv(model_path).iloc[:, 0:3]
+    model_df = pd.read_csv(model_path + model_name).iloc[:, 0:3]
     stu_set = set(list(model_df["stu_user_id"]))
     klg_set = set(list(model_df["knowledge_ids"]))
     model_df = model_df.set_index(['stu_user_id', 'knowledge_ids'])
@@ -41,19 +40,6 @@ def get_avg_score_of_stu_klg(df: pd.DataFrame, stu_user_id: int, knowledge_id):
     res = df.loc[(stu_user_id, knowledge_id)]
     score=res.values[0][0]
     return score
-# average score of a student in previous month
-# def get_avg_score_of_stu(df: pd.DataFrame):
-#     mean = df["score_rate"].groupby(df["stu_user_id"]).mean()
-#     stu_avg_dict = dict(mean)
-#     return stu_avg_dict
-
-
-# average score of knowledge in previous month
-# def get_avg_score_of_klg(df: pd.DataFrame):
-#     mean = df["score_rate"].groupby(df["knowledge_ids"]).mean()
-#     klg_avg_dict = dict(mean)
-#     return klg_avg_dict
-
 
 # average score of all students
 def get_total_avg_score(df: pd.DataFrame):
@@ -76,7 +62,7 @@ if __name__ == '__main__':
     # the first component of the string typed
     model_path = sys.argv[1]
     prediction_set_path = sys.argv[2]
-    if not (model_path.endswith('.csv') and prediction_set_path.endswith('.csv')):
+    if not (prediction_set_path.endswith('.csv')):
         print('wrong file type')
         exit(1)
     # get all df needed
@@ -87,9 +73,9 @@ if __name__ == '__main__':
     klg_set = df_res[3]
     # total_avg = get_total_avg_score(model_df)
     total_avg=0.5
-    stu_avg_dict = json.load(open(stu_avg_path, 'r', encoding="utf-8"))
+    stu_avg_dict = json.load(open(model_path + stu_avg_name, 'r', encoding="utf-8"))
     stu_avg_dict = {int(key): value for key, value in stu_avg_dict.items()}
-    klg_avg_dict = json.load(open(klg_avg_path, 'r', encoding="utf-8"))
+    klg_avg_dict = json.load(open(model_path + klg_avg_name, 'r', encoding="utf-8"))
     klg_avg_dict = {int(key): value for key, value in klg_avg_dict.items()}
     # split knowledge
     for i in range(pred_df_copy.shape[0]):
