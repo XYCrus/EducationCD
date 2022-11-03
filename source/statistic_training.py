@@ -57,7 +57,7 @@ def extract_stu_klg_json(json_data):
         json.dump(json_data, outfile, indent=4)
 
 
-def extract_klg_avg(model: pd.DataFrame):
+def extract_klg_avg(model: pd.DataFrame, folder = '../model'):
     df = model.copy()
     df = df.set_index('knowledge_ids',drop=False)
     grouped = df['score_rate'].groupby('knowledge_ids').mean()
@@ -97,13 +97,13 @@ def extract_klg_avg(model: pd.DataFrame):
         json.dump(klg_avg_dict, outfile, indent=4)
     
 
-    with open("../model/knowledge_average.json", "w") as outfile:
+    with open(folder+"/knowledge_average.json", "w") as outfile:
         json.dump(klg_avg_dict, outfile, indent=4)
 
     return model
 
 
-def extract_stu_avg(model: pd.DataFrame):
+def extract_stu_avg(model: pd.DataFrame, folder = '../model'):
     df = model.copy()
     df = df.set_index('stu_user_id',drop=False)
     grouped = df['score_rate'].groupby('stu_user_id').mean()
@@ -139,7 +139,7 @@ def extract_stu_avg(model: pd.DataFrame):
     with open("../result/student_average.json", "w") as outfile:
         json.dump(stu_score, outfile, indent=4)
         
-    with open("../model/student_average.json", "w") as outfile:
+    with open(folder+"/student_average.json", "w") as outfile:
         json.dump(stu_score, outfile, indent=4)
 
     return model
@@ -155,7 +155,7 @@ def collect_pairs(df):
     return pair_set
 
 
-def create_statistic_model(datapath: string):
+def create_statistic_model(datapath: string, folder = '../model'):
     # load data
     klgdata = pd.read_csv(datapath)
 
@@ -317,10 +317,10 @@ def create_statistic_model(datapath: string):
     model = model.sort_values(by = ['stu_user_id', 'knowledge_ids'], ascending=(True, True))
 
     # calculate klg average, write into json
-    model = extract_klg_avg(model)
+    model = extract_klg_avg(model, folder)
 
     # calculate per student average, write into json
-    model = extract_stu_avg(model)
+    model = extract_stu_avg(model, folder)
 
     # format the knowledge id as json 
     for i in range(model.shape[0]):
@@ -334,22 +334,19 @@ def create_statistic_model(datapath: string):
     model = model.set_index("stu_user_id", drop=True)
 
     # save the dataframe to file
-    model.to_csv("../model/model.csv")
+    model.to_csv(folder + "/model.csv")
 
 
-def check_folder():
+def check_folder(folder = '../model'):
     if not os.path.exists('../config'):
         os.mkdir('../config')
-    if not os.path.exists('../model'):
-        os.mkdir('../model')
+    if not os.path.exists(folder):
+        os.mkdir(folder)
     if not os.path.exists('../result'):
         os.mkdir('../result')
 
 
 if __name__ == '__main__':
-    # sys.argv catches the command parameters typed (sep with ' ')
-    # read in and record parameters
-
     # the first component of the string typed
     data_file = sys.argv[1]
     if not data_file.endswith('.csv'):
@@ -358,3 +355,5 @@ if __name__ == '__main__':
 
     check_folder()
     create_statistic_model(data_file)
+
+        
