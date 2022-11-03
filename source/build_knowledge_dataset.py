@@ -123,7 +123,7 @@ def build_dataset(wholedata_path, folder = '../model', n_latest = 3, n_fill = 3)
     data = data.append(newdata)
 
     # sort the dataset by stu id
-    data = data.sort_values(by = 'stu_user_id', ascending=True)
+    data = data.sort_values(by = 'stuUserId', ascending=True)
 
     # write into csv file
     data.to_csv(folder + "/knowledge_dataset.csv")
