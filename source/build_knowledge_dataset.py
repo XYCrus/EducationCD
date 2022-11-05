@@ -17,26 +17,6 @@ def collect_pairs(datapath):
     return pair_set
 
 
-def build_latest(wholedata_path, n=3):
-    # n: number of latest exams to select
-
-    wholedata = pd.read_csv(wholedata_path)
-
-    # check the number of exams
-    exam_count = wholedata['startDatetime'].unique()
-    if exam_count <= n:
-        wholedata.to_csv("../model/latest_dataset.csv")
-    else: 
-        # pick the dates of last n exams
-        wholedata['startDatetime'] = wholedata['startDatetime'].apply(lambda x: datetime.datetime.strptime(x,'%m/%d/%y %H:%M'))
-        exam_dates = np.sort(wholedata['startDatetime'].unique())
-        latest_dates = exam_dates[-n:]
-        # pick the data where dates in the last dates
-        latest = wholedata[wholedata['startDatetime'].isin(latest_dates)]
-        # write into file
-        latest.to_csv("../model/latest_dataset.csv")
-
-
 def build_dataset(wholedata_path, folder = '../model', n_latest = 3, n_fill = 3):
     # n_latest: number of latest exams to select
     # n_fill: number of records to find for each missing pair
@@ -60,8 +40,9 @@ def build_dataset(wholedata_path, folder = '../model', n_latest = 3, n_fill = 3)
     latest_dates = exam_dates[-n_latest:]
     # pick the data where dates in the last dates
     latest = wholedata[wholedata['startDatetime'].isin(latest_dates)]
+
     # write into file
-    latest.to_csv(datapath)
+    latest.to_csv(datapath, index=False)
 
     # build knowledge dataset
     data = latest
@@ -126,12 +107,13 @@ def build_dataset(wholedata_path, folder = '../model', n_latest = 3, n_fill = 3)
     data = data.sort_values(by = 'stuUserId', ascending=True)
 
     # write into csv file
-    data.to_csv(folder + "/knowledge_dataset.csv")
+    data.to_csv(folder + "/knowledge_dataset.csv", index = False)
 
 
 def check_folder(folder = '../model'):
     if not os.path.exists(folder):
         os.mkdir(folder)
+
 
 
 if __name__ == '__main__':

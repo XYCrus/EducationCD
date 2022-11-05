@@ -9,7 +9,7 @@ python predict.py
 
 python build_knowledge_dataset.py ../data/wholedata.csv
 
-python statistic_training_complete.py ../data/wholedata.csv ../model
-python statistic_training_complete.py ../data/new_data.csv ../model ../new_model
+python statistic_training_complete.py ../data/wholedata.csv ../result ../model
+python statistic_training_complete.py ../data/new_data.csv ../result ../model ../new_model
 
 python statistic_prediction.py ../model ../data/prediction_set.csv
