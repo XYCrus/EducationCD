@@ -17,40 +17,20 @@ def collect_pairs(datapath):
     return pair_set
 
 
-def build_latest(wholedata_path, n=3):
-    # n: number of latest exams to select
-
-    wholedata = pd.read_csv(wholedata_path)
-
-    # check the number of exams
-    exam_count = wholedata['startDatetime'].unique()
-    if exam_count <= n:
-        wholedata.to_csv("../model/latest_dataset.csv")
-    else: 
-        # pick the dates of last n exams
-        wholedata['startDatetime'] = wholedata['startDatetime'].apply(lambda x: datetime.datetime.strptime(x,'%m/%d/%y %H:%M'))
-        exam_dates = np.sort(wholedata['startDatetime'].unique())
-        latest_dates = exam_dates[-n:]
-        # pick the data where dates in the last dates
-        latest = wholedata[wholedata['startDatetime'].isin(latest_dates)]
-        # write into file
-        latest.to_csv("../model/latest_dataset.csv")
-
-
-def build_dataset(wholedata_path, n_latest = 3, n_fill = 3):
+def build_dataset(wholedata_path, folder = '../model', n_latest = 3, n_fill = 3):
     # n_latest: number of latest exams to select
     # n_fill: number of records to find for each missing pair
 
     # build latest dataset
 
     wholedata = pd.read_csv(wholedata_path)
-    datapath = "../model/latest_dataset.csv" #path for latest dataset
+    datapath = folder + "/latest_dataset.csv" #path for latest dataset
 
     ## check the number of exams
     ### if < n_latest, only create latest dataset
     exam_count = wholedata['startDatetime'].unique().size
     if exam_count <= n_latest:
-        wholedata.to_csv("../model/latest_dataset.csv")
+        wholedata.to_csv(datapath)
         return None
 
     ### elif > n_latest, create both latest dataset and knowledge dataset 
@@ -60,8 +40,9 @@ def build_dataset(wholedata_path, n_latest = 3, n_fill = 3):
     latest_dates = exam_dates[-n_latest:]
     # pick the data where dates in the last dates
     latest = wholedata[wholedata['startDatetime'].isin(latest_dates)]
+
     # write into file
-    latest.to_csv(datapath)
+    latest.to_csv(datapath, index=False)
 
     # build knowledge dataset
     data = latest
@@ -122,13 +103,17 @@ def build_dataset(wholedata_path, n_latest = 3, n_fill = 3):
     newdata['flag'] = 0
     data = data.append(newdata)
 
+    # sort the dataset by stu id
+    data = data.sort_values(by = 'stuUserId', ascending=True)
+
     # write into csv file
-    data.to_csv("../model/knowledge_dataset.csv")
+    data.to_csv(folder + "/knowledge_dataset.csv", index = False)
 
 
-def check_folder():
-    if not os.path.exists('../model'):
-        os.mkdir('../model')
+def check_folder(folder = '../model'):
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+
 
 
 if __name__ == '__main__':
@@ -140,12 +125,6 @@ if __name__ == '__main__':
     if not (wholedata_file.endswith('.csv')):
         print('wrong file type')
         exit(1)
-    
-    if len(sys.argv) >= 3:
-        n_latest = sys.argv[2]
-    
-    if len(sys.argv) >= 4:
-        n_fill = sys.argv[3]
 
     check_folder()
-    build_dataset(wholedata_file, n_latest=3, n_fill=3)
+    build_dataset(wholedata_file)
