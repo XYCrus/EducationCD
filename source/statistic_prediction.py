@@ -6,15 +6,16 @@ import json
 import os.path
 
 
-stu_avg_name = "/student_average.json"
-klg_avg_name= "/knowledge_average.json"
-model_name = "/model.csv"
-
-def create_df_and_set(model_path, prediction_set_path):
-    model_df = pd.read_csv(model_path + model_name).iloc[:, 0:3]
-    stu_set = set(list(model_df["stu_user_id"]))
-    klg_set = set(list(model_df["knowledge_ids"]))
-    model_df = model_df.set_index(['stu_user_id', 'knowledge_ids'])
+stu_avg_file = "/student_average.json"
+klg_avg_file= "/knowledge_average.json"
+model_file = "/model.csv"
+#prediction_set_file="/prediction_set.csv"
+result_file="/result.csv"
+def create_df_and_set(model_path, prediction_sSet_path):
+    model_df = pd.read_csv(model_path + model_file).iloc[:, 0:3]
+    stu_set = set(list(model_df["stuUserId"]))
+    klg_set = set(list(model_df["knowledgeTagIds"]))
+    model_df = model_df.set_index(['stuUserId', 'knowledgeTagIds'])
     pred_df = pd.read_csv(prediction_set_path)
     pred_df_copy = pred_df[["stuUserId", "examinationId", "questionType", "knowledgeTagIds", "scorePercentage"]].copy()
     # record splited klg
@@ -62,9 +63,10 @@ if __name__ == '__main__':
     # the first component of the string typed
     model_path = sys.argv[1]
     prediction_set_path = sys.argv[2]
-    if not (prediction_set_path.endswith('.csv')):
-        print('wrong file type')
-        exit(1)
+    result_path=sys.argv[3]
+    # if not (prediction_set_path.endswith('.csv')):
+    #     print('wrong file type')
+    #     exit(1)
     # get all df needed
     df_res = create_df_and_set(model_path, prediction_set_path)
     model_df = df_res[0]
@@ -73,9 +75,9 @@ if __name__ == '__main__':
     klg_set = df_res[3]
     # total_avg = get_total_avg_score(model_df)
     total_avg=0.5
-    stu_avg_dict = json.load(open(model_path + stu_avg_name, 'r', encoding="utf-8"))
+    stu_avg_dict = json.load(open(model_path + stu_avg_file, 'r', encoding="utf-8"))
     stu_avg_dict = {int(key): value for key, value in stu_avg_dict.items()}
-    klg_avg_dict = json.load(open(model_path + klg_avg_name, 'r', encoding="utf-8"))
+    klg_avg_dict = json.load(open(model_path + klg_avg_file, 'r', encoding="utf-8"))
     klg_avg_dict = {int(key): value for key, value in klg_avg_dict.items()}
     # split knowledge
     for i in range(pred_df_copy.shape[0]):
@@ -190,7 +192,7 @@ if __name__ == '__main__':
     sum_square = sum(diff_purified ** 2)
     mse = sum_square / len(res)
 
-    res.to_csv("../result/result.csv", index=False)
+    res.to_csv(result_path+result_file, index=False)
 
     # accuracy of all question type
     all_type_sum = pred_df_copy["accuracy_flag"].groupby(pred_df_copy["questionType"]).sum()
