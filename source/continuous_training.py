@@ -2,7 +2,7 @@ import sys
 import os.path
 import pandas as pd
 import datetime
-from statistic_training import create_statistic_model
+from statistic_training import create_statistic_model, check_folder
 
 def retrain(newdatapath, result_folder = '../result', oldfolder = '../model', newfolder = '../new_model'):
     olddatapath = oldfolder + '/knowledge_dataset.csv'
@@ -27,7 +27,7 @@ def retrain(newdatapath, result_folder = '../result', oldfolder = '../model', ne
     df.to_csv(newfolder+"/knowledge_dataset.csv", index=False)
 
     # rebuild statistic model to new folder
-    create_statistic_model(newfolder + "/knowledge_dataset.csv", newfolder, result_folder)
+    create_statistic_model(newfolder + "/knowledge_dataset.csv", model_folder = newfolder, result_folder = result_folder)
 
     
 if __name__ == '__main__':
@@ -40,5 +40,6 @@ if __name__ == '__main__':
         print('wrong file type')
         exit(1)
 
+    check_folder(model_folder = new_folder, result_folder = result_folder)
     retrain(newdatapath, result_folder, old_folder, new_folder)
     
