@@ -29,7 +29,7 @@ if __name__ == '__main__':
         if not new_file.endswith('.csv'):
             print('wrong file type')
             exit(1)
-        
+        check_folder(model_folder = new_folder, result_folder = result_folder)
         retrain(new_file, result_folder, old_folder, new_folder)
         
 
