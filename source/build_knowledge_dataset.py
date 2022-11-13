@@ -101,7 +101,7 @@ def build_dataset(wholedata_path, folder = '../model', n_latest = 3, n_fill = 3)
     # append to data the rows of missing pairs corresponding to indices, with flag = 0
     newdata = wholedata.loc[indices]
     newdata['flag'] = 0
-    data = data.append(newdata)
+    data = pd.concat([data,newdata], ignore_index=True)
 
     # sort the dataset by stu id
     data = data.sort_values(by = 'stuUserId', ascending=True)

@@ -4,7 +4,7 @@ import os.path
 import pandas as pd
 import numpy as np
 import json
-
+from datetime import datetime
 
 def get_summary(df, stu_id):
     sub_df = df[df['stuUserId'] == stu_id]
@@ -145,16 +145,6 @@ def extract_stu_avg(model: pd.DataFrame, model_folder = '../model', result_folde
     return model
 
 
-def collect_pairs(df):
-    pair_set = set([])
-    for i in range(df.shape[0]):
-        stu = df['stuUserId'].iloc[i]
-        knowledges = json.loads(df['knowledgeTagIds'].iloc[i])
-        for klg in knowledges:
-            pair_set.add((stu,klg))
-    return pair_set
-
-
 def create_statistic_model(datapath: string, model_folder = '../model', result_folder = '../result'):
     # load data
     klgdata = pd.read_csv(datapath)
@@ -165,106 +155,98 @@ def create_statistic_model(datapath: string, model_folder = '../model', result_f
 
     df = klgdata[klgdata['flag'] == 1]
 
-    # collect student - knowledge pairs of latest
-    stu_col = []
-    klg_col = []
-    pair_set = collect_pairs(df)
-    for pair in pair_set:
-        stu_col.append(pair[0])
-        klg_col.append(pair[1])
+    # find all unique student ids
+    all_stu = df['stuUserId'].unique()
+    all_stu
 
-    # build new dataframe
-    data = {'stuUserId': np.array(stu_col), 'knowledgeTagIds': np.array(klg_col)}
+    # initialization
+    stu = all_stu[0]
+    avg_scores, count_0, count_1, count_single, count_multiple = get_summary(df, stu)
+    ## initialize model dataframe
+    klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
+    stu_col = [stu]*len(klg_col)
+    count_1_col = list(count_1.values())
+    count_0_col = list(count_0.values())
+    count_single_col = list(count_single.values())
+    count_multi_col = list(count_multiple.values())
+    count_tot = np.array(count_single_col) + np.array(count_multi_col)
+
+    data = {'stuUserId': stu_col, 'knowledgeTagIds': klg_col, 'scorePercentage': score_col, '1_score_count': count_1_col,
+        '0_score_count': count_0_col, 'single_knowledge': count_single_col, 'multiple_knowledge': count_multi_col,
+        'total_count': count_tot}
     model = pd.DataFrame(data=data)
-
-    # build remaining column and json data
-
+    
+    ## initialize json data
     json_data = {}
-
-    ## initialization
-    stu = model['stuUserId'].iloc[0]
-    summary = get_summary(df, stu)
-    klg = model['knowledgeTagIds'].iloc[0]
-
-    ### record info into cols
-    avg_score_col = [summary[0][klg]]
-    col_0 = [summary[1][klg]]
-    col_1 = [summary[2][klg]]
-    col_sing = [summary[3][klg]]
-    col_comp = [summary[4][klg]]
-
-    ### record info into json data
+    ## record info into json data
     current_student_scores = {"stuUserId": str(stu)}
     knowledgScores = []
-    avg_scores = summary[0]
     for (key, val) in avg_scores.items():
         knowledgScores.append({"knowledgeTagId": key, "score": val})
     current_student_scores["knowledgeScores"] = knowledgScores
     json_data[stu] = current_student_scores
 
-    ## loop
-    for i in range(1, model.shape[0]):
-        stu = model['stuUserId'].iloc[i]
+    # loop
+    for i in range(1, len(all_stu)):
+        stu = all_stu[i]
+        ## write chunk
+        avg_scores, count_0, count_1, count_single, count_multiple = get_summary(df, stu)
 
-        if stu != model['stuUserId'].iloc[i-1]: # need to change summary
-            summary = get_summary(df, stu)
-            ### record json data
-            current_student_scores = {"stuUserId": str(stu)}
-            knowledgScores = []
-            avg_scores = summary[0]
-            for (key, val) in avg_scores.items():
-                knowledgScores.append({"knowledgeTagId": key, "score": val})
-            current_student_scores["knowledgeScores"] = knowledgScores
-            json_data[stu] = current_student_scores
+        klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
+        stu_col = [stu]*len(klg_col)
+        count_1_col = list(count_1.values())
+        count_0_col = list(count_0.values())
+        count_single_col = list(count_single.values())
+        count_multi_col = list(count_multiple.values())
+        count_tot = np.array(count_single_col) + np.array(count_multi_col)
 
-        klg = model['knowledgeTagIds'].iloc[i]
-        avg_score_col.append(summary[0][klg])
-        col_0.append(summary[1][klg])
-        col_1.append(summary[2][klg])
-        col_sing.append(summary[3][klg])
-        col_comp.append(summary[4][klg])
+        data = {'stuUserId': stu_col, 'knowledgeTagIds': klg_col, 'scorePercentage': score_col, '1_score_count': count_1_col,
+            '0_score_count': count_0_col, 'single_knowledge': count_single_col, 'multiple_knowledge': count_multi_col,
+            'total_count': count_tot}
+        chunk = pd.DataFrame(data=data)
+        
+        ## append chunk to model
+        model = pd.concat([model,chunk], ignore_index=True)
+        
+        ## record json data
+        current_student_scores = {"stuUserId": str(stu)}
+        knowledgScores = []
+        for (key, val) in avg_scores.items():
+            knowledgScores.append({"knowledgeTagId": key, "score": val})
+        current_student_scores["knowledgeScores"] = knowledgScores
+        json_data[stu] = current_student_scores
 
-    ## build columns
-    model['scorePercentage'] = np.array(avg_score_col)
-    model['1_score_count'] = np.array(col_1)
-    model['0_score_count'] = np.array(col_0)
-    model['single_knowledge'] = np.array(col_sing)
-    model['multiple_knowledge'] = np.array(col_comp)
-    model['total_count'] = model['single_knowledge'] + model['multiple_knowledge']
-    model['flag'] = 1
+        # finishing latest data
+        model['flag'] = 1
 
     ###########################################
     ######## working on filled data ###########
     ###########################################
 
-    fill = klgdata[klgdata['flag'] == 0]
+    fill_df = klgdata[klgdata['flag'] == 0]
 
-    stu_col = []
-    klg_col = []
-    pair_set = collect_pairs(fill)
-    for pair in pair_set:
-        stu_col.append(pair[0])
-        klg_col.append(pair[1])
+    # find all unique student ids
+    all_stu = fill_df['stuUserId'].unique()
 
-    # build new dataframe
-    data = {'stuUserId': np.array(stu_col), 'knowledgeTagIds': np.array(klg_col)}
-    extn = pd.DataFrame(data=data)
+    # initialization
+    stu = all_stu[0]
+    avg_scores, count_0, count_1, count_single, count_multiple = get_summary(fill_df, stu)
+    ## initialize model dataframe
+    klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
+    stu_col = [stu]*len(klg_col)
+    count_1_col = list(count_1.values())
+    count_0_col = list(count_0.values())
+    count_single_col = list(count_single.values())
+    count_multi_col = list(count_multiple.values())
+    count_tot = np.array(count_single_col) + np.array(count_multi_col)
 
-    ## initialization
-    stu = extn['stuUserId'].iloc[0]
-    summary = get_summary(fill, stu)
-    klg = extn['knowledgeTagIds'].iloc[0]
-
-    ### record info into cols
-    avg_score_col = [summary[0][klg]]
-    col_0 = [summary[1][klg]]
-    col_1 = [summary[2][klg]]
-    col_sing = [summary[3][klg]]
-    col_comp = [summary[4][klg]]
-
-    ### record info into json data
+    data = {'stuUserId': stu_col, 'knowledgeTagIds': klg_col, 'scorePercentage': score_col, '1_score_count': count_1_col,
+        '0_score_count': count_0_col, 'single_knowledge': count_single_col, 'multiple_knowledge': count_multi_col,
+        'total_count': count_tot}
+    model_extension = pd.DataFrame(data=data)
+    
+    ## record info into json data
     knowledgScores = []
-    avg_scores = summary[0]
     for (key, val) in avg_scores.items():
         knowledgScores.append({"knowledgeTagId": key, "score": val})
     if stu in json_data.keys():
@@ -274,44 +256,48 @@ def create_statistic_model(datapath: string, model_folder = '../model', result_f
         current_student_scores['knowledgeScores'] = knowledgScores
         json_data[stu] = current_student_scores
 
-    ## loop
-    for i in range(1, extn.shape[0]):
-        stu = extn['stuUserId'].iloc[i]
+    # loop
+    for i in range(1, len(all_stu)):
+        stu = all_stu[i]
+        ## write chunk
+        avg_scores, count_0, count_1, count_single, count_multiple = get_summary(fill_df, stu)
 
-        if stu != extn['stuUserId'].iloc[i-1]: # need to change summary
-            summary = get_summary(fill, stu)
-            ### record json data
-            knowledgScores = []
-            avg_scores = summary[0]
-            for (key, val) in avg_scores.items():
-                knowledgScores.append({"knowledgeTagId": key, "score": val})
-            if stu in json_data.keys():
-                json_data[stu]['knowledgeScores'] += knowledgScores
-            else:
-                current_student_scores = {"stuUserId": str(stu)}
-                current_student_scores['knowledgeScores'] = knowledgScores
-                json_data[stu] = current_student_scores
+        klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
+        stu_col = [stu]*len(klg_col)
+        count_1_col = list(count_1.values())
+        count_0_col = list(count_0.values())
+        count_single_col = list(count_single.values())
+        count_multi_col = list(count_multiple.values())
+        count_tot = np.array(count_single_col) + np.array(count_multi_col)
 
-        klg = extn['knowledgeTagIds'].iloc[i]
-        avg_score_col.append(summary[0][klg])
-        col_0.append(summary[1][klg])
-        col_1.append(summary[2][klg])
-        col_sing.append(summary[3][klg])
-        col_comp.append(summary[4][klg])
+        data = {'stuUserId': stu_col, 'knowledgeTagIds': klg_col, 'scorePercentage': score_col, '1_score_count': count_1_col,
+            '0_score_count': count_0_col, 'single_knowledge': count_single_col, 'multiple_knowledge': count_multi_col,
+            'total_count': count_tot}
+        chunk = pd.DataFrame(data=data)
+        
+        ## append chunk to model_extension
+        model_extension = pd.concat([model_extension,chunk], ignore_index=True)
+        
+        ## record json data
+        knowledgScores = []
+        for (key, val) in avg_scores.items():
+            knowledgScores.append({"knowledgeTagId": key, "score": val})
+        if stu in json_data.keys():
+            json_data[stu]['knowledgeScores'] += knowledgScores
+        else:
+            current_student_scores = {"stuUserId": str(stu)}
+            current_student_scores['knowledgeScores'] = knowledgScores
+            json_data[stu] = current_student_scores
 
-    ## build columns
-    extn['scorePercentage'] = np.array(avg_score_col)
-    extn['1_score_count'] = np.array(col_1)
-    extn['0_score_count'] = np.array(col_0)
-    extn['single_knowledge'] = np.array(col_sing)
-    extn['multiple_knowledge'] = np.array(col_comp)
-    extn['total_count'] = extn['single_knowledge'] + extn['multiple_knowledge']
-    extn['flag'] = 0
+    # finishing filled data
+    model_extension['flag'] = 0
+
+    # integrate model and model_extension
+    model = pd.concat([model,model_extension], ignore_index=True)
 
     ###########################################
     ######## formatting & averaging ###########
     ###########################################
-    model = pd.concat([model,extn], ignore_index=True)
 
     # sort the values by stu id and klg id
     model = model.sort_values(by = ['stuUserId', 'knowledgeTagIds'], ascending=(True, True))
@@ -347,6 +333,7 @@ def check_folder(model_folder = '../model', result_folder = '../result'):
 
 
 if __name__ == '__main__':
+    begin = datetime.now()
     # the first component of the string typed
     data_file = sys.argv[1]
     if not data_file.endswith('.csv'):
@@ -358,5 +345,7 @@ if __name__ == '__main__':
 
     check_folder(model_folder,result_folder)
     create_statistic_model(data_file, model_folder, result_folder)
+    end = datetime.now()
+    print("time: ",end-begin)
 
         
