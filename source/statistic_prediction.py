@@ -1,27 +1,30 @@
-
 import sys
+import time
+
 import pandas as pd
 import numpy as np
 import json
 import os.path
-
+start=time.time()
 
 stu_avg_file = "/student_average.json"
-klg_avg_file= "/knowledge_average.json"
+klg_avg_file = "/knowledge_average.json"
 model_file = "/model.csv"
-#prediction_set_file="/prediction_set.csv"
-result_file="/result.csv"
-def create_df_and_set(model_path, prediction_sSet_path):
+# prediction_set_file="/prediction_set.csv"
+result_file = "/result.csv"
+
+
+def create_df_and_set(model_path, prediction_set_path):
     model_df = pd.read_csv(model_path + model_file).iloc[:, 0:3]
     stu_set = set(list(model_df["stuUserId"]))
-    klg_set = set(list(model_df["knowledgeTagIds"]))
+    klg_set = set(json.loads(i)[0] for i in list(model_df["knowledgeTagIds"]))
     model_df = model_df.set_index(['stuUserId', 'knowledgeTagIds'])
     pred_df = pd.read_csv(prediction_set_path)
     pred_df_copy = pred_df[["stuUserId", "examinationId", "questionType", "knowledgeTagIds", "scorePercentage"]].copy()
     # record splited klg
-    pred_df_copy[f"klg{0}"] = None
-    pred_df_copy[f"klg{1}"] = None
-    pred_df_copy[f"klg{2}"] = None
+    # pred_df_copy[f"klg{0}"] = None
+    # pred_df_copy[f"klg{1}"] = None
+    # pred_df_copy[f"klg{2}"] = None
 
     # record of known/unknown klg and stu
     # known stu 1, else 0
@@ -39,8 +42,9 @@ def create_df_and_set(model_path, prediction_sSet_path):
 # score of a specified student's knowledge
 def get_avg_score_of_stu_klg(df: pd.DataFrame, stu_user_id: int, knowledge_id):
     res = df.loc[(stu_user_id, knowledge_id)]
-    score=res.values[0][0]
+    score = res.values[0][0]
     return score
+
 
 # average score of all students
 def get_total_avg_score(df: pd.DataFrame):
@@ -48,25 +52,23 @@ def get_total_avg_score(df: pd.DataFrame):
 
 
 def check_folder():
-    if not os.path.exists('../config'):
-        os.mkdir('../config')
     if not os.path.exists('../model'):
         os.mkdir('../model')
     if not os.path.exists('../result'):
         os.mkdir('../result')
 
-
 if __name__ == '__main__':
     # sys.argv catches the command parameters typed (sep with ' ')
     # read in and record parameters
     check_folder()
-    # the first component of the string typed
-    model_path = sys.argv[1]
-    prediction_set_path = sys.argv[2]
-    result_path=sys.argv[3]
-    # if not (prediction_set_path.endswith('.csv')):
-    #     print('wrong file type')
-    #     exit(1)
+    # # the first component of the string typed
+    prediction_set_path = sys.argv[1]
+    result_path = sys.argv[2]
+    model_path = sys.argv[3]
+
+    if not (prediction_set_path.endswith('.csv')):
+        print('wrong file type')
+        exit(1)
     # get all df needed
     df_res = create_df_and_set(model_path, prediction_set_path)
     model_df = df_res[0]
@@ -74,110 +76,111 @@ if __name__ == '__main__':
     stu_set = df_res[2]
     klg_set = df_res[3]
     # total_avg = get_total_avg_score(model_df)
-    total_avg=0.5
+    total_avg = 0.5
     stu_avg_dict = json.load(open(model_path + stu_avg_file, 'r', encoding="utf-8"))
     stu_avg_dict = {int(key): value for key, value in stu_avg_dict.items()}
     klg_avg_dict = json.load(open(model_path + klg_avg_file, 'r', encoding="utf-8"))
     klg_avg_dict = {int(key): value for key, value in klg_avg_dict.items()}
-    # split knowledge
-    for i in range(pred_df_copy.shape[0]):
-        knowledges = json.loads(pred_df_copy['knowledgeTagIds'].iloc[i])
-        for j in range(len(knowledges)):
-            pred_df_copy.loc[i, f"klg{j}"] = json.dumps([knowledges[j]])
+    #loop
 
-    # flag of known/unknown student and klg
-    for i in range(pred_df_copy.shape[0]):
-        stu_user_id = pred_df_copy["stuUserId"].iloc[i]
-        klg_list = []
+    for index,row in pred_df_copy.iterrows():
+        # flag known/unknown student and klg
+        knowledges = json.loads(row['knowledgeTagIds'])
+        klg_num=len(knowledges)
+        stu_user_id = row["stuUserId"]
         num_of_known_klg = 0
+        # check if student is new
         if stu_user_id in stu_set:
-            pred_df_copy.loc[i, "stu_flag"] = 1
+            stu_flag=1
         elif stu_user_id not in stu_set:
-            pred_df_copy.loc[i, "stu_flag"] = 0
-        for j in range(3):
-            if pred_df_copy[f"klg{j}"].iloc[i] is not None:
-                klg_list.append(pred_df_copy[f"klg{j}"].iloc[i])
-        for k in range(len(klg_list)):
-            if klg_list[k] in klg_set:
+            stu_flag = 0
+        pred_df_copy.loc[index, "stu_flag"] = stu_flag
+        #check if knowledge is new
+        for klg in knowledges:
+            if klg in klg_set:
                 num_of_known_klg += 1
-        if num_of_known_klg == len(klg_list):
-            pred_df_copy.loc[i, "klg_flag"] = 1
-            pred_df_copy.loc[i, "half_klg_flag"] = 1
-        elif num_of_known_klg < len(klg_list) and num_of_known_klg > 0:
-            pred_df_copy.loc[i, "klg_flag"] = 0
-            pred_df_copy.loc[i, "half_klg_flag"] = 1
+            #pred_df_copy.loc[index, f"klg{j}"] = klg
+        if num_of_known_klg == klg_num:
+            klg_flag = 1
+            half_klg_flag = 1
+        elif num_of_known_klg < klg_num and num_of_known_klg > 0:
+            klg_flag = 0
+            half_klg_flag = 1
         elif num_of_known_klg == 0:
-            pred_df_copy.loc[i, "klg_flag"] = 0
-            pred_df_copy.loc[i, "half_klg_flag"] = 0
-    # prediction
-    for i in range(pred_df_copy.shape[0]):
-        stu_user_id = pred_df_copy["stuUserId"].iloc[i]
+            klg_flag = 0
+            half_klg_flag = 0
+        pred_df_copy.loc[index, "klg_flag"] = klg_flag
+        pred_df_copy.loc[index, "half_klg_flag"] = half_klg_flag
+        # prediction
+        stu_user_id = row["stuUserId"]
         single_stu_score = []
+        klgs=json.loads(row["knowledgeTagIds"])
         # check if the student is known
         if stu_user_id in stu_set:
             # iterate over klg, with maximun number of klg=3
-            for j in range(3):
-                klg_id = pred_df_copy[f"klg{j}"].iloc[i]
+            for j in range(len(klgs)):
+                klg_id = klgs[j]
                 # check if the klg is known
                 if klg_id in klg_set:
-                    if get_avg_score_of_stu_klg(model_df, stu_user_id=stu_user_id, knowledge_id=klg_id) is not None:
-                        single_stu_score.append(
-                            get_avg_score_of_stu_klg(model_df, stu_user_id=stu_user_id, knowledge_id=klg_id))
+                    klg_id_js=json.dumps(klg_id.split(" "))
+                    score=get_avg_score_of_stu_klg(model_df, stu_user_id=stu_user_id, knowledge_id=klg_id_js)
+                    if score is not None:
+                        single_stu_score.append(score)
                     # student miss some of the exam
                     else:
                         single_stu_score.append(klg_avg_dict[klg_id])
                 # when klg_id is not none and is unknown
-                elif klg_id is not None and klg_id not in klg_set:
-                    single_stu_score.append(stu_avg_dict[stu_user_id])
+                elif klg_id not in klg_set:
+                     single_stu_score.append(stu_avg_dict[stu_user_id])
 
-            pred_df_copy.loc[i, "pred_before_mapping"] = min(single_stu_score)
+            pred_df_copy.loc[index, "pred_before_mapping"] = min(single_stu_score)
         elif stu_user_id not in stu_set:
-            for j in range(3):
-                klg_id = pred_df_copy[f"klg{j}"].iloc[i]
+            for j in range(len(klgs)):
+                klg_id = klgs[j]
                 # check if the klg is known
                 if klg_id in klg_set:
                     single_stu_score.append(klg_avg_dict[klg_id])
                 # when klg_id is not none and is unknown
-                elif klg_id is not None and klg_id not in klg_set:
+                elif klg_id not in klg_set:
                     single_stu_score.append(total_avg)
-            pred_df_copy.loc[i, "pred_before_mapping"] = min(single_stu_score)
+            pred_df_copy.loc[index, "pred_before_mapping"] = min(single_stu_score)
+        # Mapping
+        qt = row["questionType"]
+        pred_before_mapping = pred_df_copy["pred_before_mapping"].iloc[index]
 
-    # Mapping
-    for i in range(pred_df_copy.shape[0]):
-        qt = pred_df_copy["questionType"].iloc[i]
-        pred_before_mapping = pred_df_copy["pred_before_mapping"].iloc[i]
         if qt == "SCHOICE":
-            pred_df_copy.loc[i, "pred_after_mapping"] = 1 if pred_before_mapping > 0.5 else 0
+            pred_after_mapping= 1 if pred_before_mapping > 0.5 else 0
         elif qt == "FILLBLANK" or qt == "MCHOICE":
             if pred_before_mapping > 0.8:
-                pred_df_copy.loc[i, "pred_after_mapping"] = 1
+                pred_after_mapping = 1
             elif pred_before_mapping > 0.5:
-                pred_df_copy.loc[i, "pred_after_mapping"] = 0.6
+                pred_after_mapping = 0.6
             elif pred_before_mapping > 0.2:
-                pred_df_copy.loc[i, "pred_after_mapping"] = 0.4
+                pred_after_mapping = 0.4
             else:
-                pred_df_copy.loc[i, "pred_after_mapping"] = 0
+                pred_after_mapping = 0
         elif qt == "SHORTANSWER":
-            pred_df_copy.loc[i, "pred_after_mapping"] = pred_before_mapping
-
+            pred_after_mapping= pred_before_mapping
+        pred_df_copy.loc[index, "pred_after_mapping"] = pred_after_mapping
     pred_df_copy["accuracy_flag"] = None
     # check if prediction is accurate
-    for i in range(len(pred_df_copy)):
-        if pred_df_copy['pred_after_mapping'].iloc[i] is not None:
-            if pred_df_copy['questionType'].iloc[i] != "SHORTANSWER":
-                if pred_df_copy['scorePercentage'].iloc[i] == pred_df_copy['pred_after_mapping'].iloc[i]:
-                    pred_df_copy.loc[i, 'accuracy_flag'] = 1
-                else:
-                    pred_df_copy.loc[i, 'accuracy_flag'] = 0
-            elif pred_df_copy['questionType'].iloc[i] == "SHORTANSWER":
-                if 1.2 * (pred_df_copy['scorePercentage'].iloc[i]) >= pred_df_copy['pred_after_mapping'].iloc[
-                    i] >= 0.8 * (
-                        pred_df_copy['scorePercentage'].iloc[i]):
-                    pred_df_copy.loc[i, 'accuracy_flag'] = 1
-                else:
-                    pred_df_copy.loc[i, 'accuracy_flag'] = 0
-    accu = np.array(pred_df_copy["accuracy_flag"])
+    for index,row in pred_df_copy.iterrows():
+        qt=row['questionType']
+        answer_score=row['scorePercentage']
+        pred_score_after_mapping=row['pred_after_mapping']
+        if qt!= "SHORTANSWER":
+            if answer_score == pred_score_after_mapping:
+                answer_accuracy = 1
+            else:
+                answer_accuracy = 0
+        elif qt == "SHORTANSWER":
+            if 1.2 * answer_score >= pred_score_after_mapping>= 0.8 * answer_score:
+                answer_accuracy= 1
+            else:
+                answer_accuracy = 0
+        pred_df_copy.loc[index, 'accuracy_flag']=answer_accuracy
 
+    accu = np.array(pred_df_copy["accuracy_flag"])
     accu_purified = np.array([i for i in accu if i is not None])
     accuracy = accu_purified.mean()
 
@@ -185,14 +188,14 @@ if __name__ == '__main__':
 
     res = pred_df_copy[
         ["stuUserId", "examinationId", "knowledgeTagIds", "questionType", "scorePercentage", "stu_flag", "klg_flag",
-         "half_klg_flag", "pred_before_mapping", "pred_after_mapping", "differences", "accuracy_flag"]]
+            "half_klg_flag", "pred_before_mapping", "pred_after_mapping", "differences", "accuracy_flag"]]
 
     diff = np.array(res["differences"])
     diff_purified = np.array([i for i in diff if not np.isnan(i)])
     sum_square = sum(diff_purified ** 2)
     mse = sum_square / len(res)
 
-    res.to_csv(result_path+result_file, index=False)
+    res.to_csv(result_path + result_file, index=False)
 
     # accuracy of all question type
     all_type_sum = pred_df_copy["accuracy_flag"].groupby(pred_df_copy["questionType"]).sum()
@@ -222,3 +225,5 @@ print(accuracy)
 print(mse)
 print(all_type_accuracy)
 print(all_type_mse)
+end=time.time()
+print('Running time: %s Seconds'%(end-start))
