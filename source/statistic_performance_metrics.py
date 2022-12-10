@@ -14,13 +14,13 @@ def stat_metrics(df):
     #accuracy
     accu = np.array(df["accuracyFlag"])
     accu_purified = np.array([i for i in accu if i is not None])
-    accuracy = accu_purified.mean()
+    accuracy = round(accu_purified.mean(), 5)
 
     #mse
     diff = np.array(df["differences"])
     diff_purified = np.array([i for i in diff if not np.isnan(i)])
     sum_square = sum(diff_purified ** 2)
-    mse = sum_square / len(df)
+    mse = round(sum_square / len(df), 5)
 
     # all type accuracy
     all_type_sum = df["accuracyFlag"].groupby(df["questionType"]).sum()
@@ -31,7 +31,7 @@ def stat_metrics(df):
     for key1, value1 in all_type_sum.items():
         for key2, value2 in all_type_count.items():
             if key1 == key2:
-                all_type_accuracy[key1] = value1 / value2
+                all_type_accuracy[key1] = round(value1 / value2, 5)
 
     # all type mse
     df["squared_differences"] = df["differences"] ** 2
@@ -41,7 +41,7 @@ def stat_metrics(df):
     for key1, value1 in all_type_squared_diff.items():
         for key2, value2 in all_type_count.items():
             if key1 == key2:
-                all_type_mse[key1] = value1 / value2
+                all_type_mse[key1] = round(value1 / value2, 5)
 
     return accuracy, mse, all_type_accuracy, all_type_mse
 

@@ -10,4 +10,4 @@ python pipeline_activation.py *n* *d*
 
 * @*n*: int, specify *n* unique dates to test on
 
-* @*d*: int, specify dataset choice, **1** for whole dataset, **2** for dataset of below average students
+* @*d*: int, specify dataset path, **"../data/wholedata.csv"** for whole dataset, **"../data/data2.csv"** for dataset of below average students
