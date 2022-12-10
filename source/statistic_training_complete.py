@@ -1,9 +1,11 @@
+#%%
 import sys
 from datetime import datetime
 from build_knowledge_dataset import build_dataset
 from statistic_training import create_statistic_model, check_folder
 from continuous_training import retrain
 
+#%%
 if __name__ == '__main__':
     begin = datetime.now()
 

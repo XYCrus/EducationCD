@@ -1,3 +1,4 @@
+#%%
 import sys
 import time
 
@@ -15,6 +16,7 @@ model_file = "/model.csv"
 result_file = "/result.csv"
 
 
+#%%
 def create_df_and_set(model_path, prediction_set_path):
     model_df = pd.read_csv(model_path + model_file).iloc[:, 0:3]
     stu_set = set(list(model_df["stuUserId"]))
@@ -131,6 +133,7 @@ def predict_student_scores_after_mapping(question_type, predictionBeforeMapping)
         predictionAfterMapping = predictionBeforeMapping
     return predictionAfterMapping
 
+#%%
 if __name__ == '__main__':
     # sys.argv catches the command parameters typed (sep with ' ')
     # read in and record parameters
