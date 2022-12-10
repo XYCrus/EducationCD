@@ -65,35 +65,6 @@ def extract_klg_avg(model: pd.DataFrame, model_folder='../model', result_folder=
     model['klg_avg'] = model['knowledgeTagIds'].apply(lambda x: grouped.loc[x])
     klg_avg_dict = dict(grouped)
 
-    # klg1_score = {}
-    # klg1_count = {}
-    # klg0_score = {}
-    # klg0_count = {}
-
-    # df1 = model[model['flag'] == 1]
-    # for i in range(df1.shape[0]):
-    #     klg = df1['knowledgeTagIds'].iloc[i]
-    #     score = df1['scorePercentage'].iloc[i]
-    #     count = df1['total_count'].iloc[i]
-    #     klg1_score[klg] = klg1_score.get(klg,0) + score*count
-    #     klg1_count[klg] = klg1_score.get(klg,0) + count
-    # for key in klg1_count.keys():
-    #     klg1_score[key] = klg1_score[key] / klg1_count[key]
-
-    # df0 = model[model['flag'] == 0]
-    # for i in range(df0.shape[0]):
-    #     klg = df0['knowledgeTagIds'].iloc[i]
-    #     if klg not in klg1_count.keys():
-    #         score = df0['scorePercentage'].iloc[i]
-    #         count = df0['total_count'].iloc[i]
-    #         klg0_score[klg] = klg0_score.get(klg,0) + score*count
-    #         klg0_count[klg] = klg0_score.get(klg,0) + count
-    # for key in klg0_count.keys():
-    #     klg0_score[key] = klg0_score[key] / klg0_count[key]
-
-    # klg_avg_dict = dict(klg1_score, **klg0_score)
-    # model['klg_avg'] = model['knowledgeTagIds'].apply(lambda x: klg_avg_dict[x])
-
     with open(result_folder + "/knowledge_average.json", "w") as outfile:
         json.dump(klg_avg_dict, outfile, indent=4)
 
@@ -109,32 +80,6 @@ def extract_stu_avg(model: pd.DataFrame, model_folder='../model', result_folder=
     grouped = df['scorePercentage'].groupby('stuUserId').mean()
     model['stu_avg'] = model['stuUserId'].apply(lambda x: grouped.loc[x])
     stu_score = dict(grouped)
-
-    # stu_score = {}
-    # stu_count = {}
-    # stu_flag = {}
-
-    # df1 = model[model['flag'] == 1]
-    # for i in range(df1.shape[0]):
-    #     stu = int(df1['stuUserId'].iloc[i])
-    #     score = df1['scorePercentage'].iloc[i]
-    #     count = df1['total_count'].iloc[i]
-    #     stu_score[stu] = stu_score.get(stu,0) + score*count
-    #     stu_count[stu] = stu_score.get(stu,0) + count
-    #     stu_flag[stu] = 1
-
-    # df0 = model[model['flag'] == 0]
-    # for i in range(df0.shape[0]):
-    #     stu = int(df0['stuUserId'].iloc[i])
-    #     if not stu_flag.get(stu,0):
-    #         score = df0['scorePercentage'].iloc[i]
-    #         count = df0['total_count'].iloc[i]
-    #         stu_score[stu] = stu_score.get(stu,0) + score*count
-    #         stu_count[stu] = stu_score.get(stu,0) + count
-    # for key in stu_count.keys():
-    #     stu_score[key] = stu_score[key] / stu_count[key]
-
-    # model['stu_avg'] = model['stuUserId'].apply(lambda x: stu_score[x])
 
     with open(result_folder + "/student_average.json", "w") as outfile:
         json.dump(stu_score, outfile, indent=4)
