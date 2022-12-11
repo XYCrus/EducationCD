@@ -35,7 +35,7 @@ def build_dataset(wholedata_path, folder = '../model', n_latest = 3, n_fill = 3)
 
     ### elif > n_latest, create both latest dataset and knowledge dataset 
     ## pick the dates of last n exams
-    wholedata['startDatetime'] = wholedata['startDatetime'].apply(lambda x: datetime.datetime.strptime(x,'%m/%d/%y %H:%M'))
+    #wholedata['startDatetime'] = wholedata['startDatetime'].apply(lambda x: datetime.datetime.strptime(x,'%m/%d/%y %H:%M'))
     exam_dates = np.sort(wholedata['startDatetime'].unique())
     latest_dates = exam_dates[-n_latest:]
     # pick the data where dates in the last dates
@@ -101,7 +101,7 @@ def build_dataset(wholedata_path, folder = '../model', n_latest = 3, n_fill = 3)
     # append to data the rows of missing pairs corresponding to indices, with flag = 0
     newdata = wholedata.loc[indices]
     newdata['flag'] = 0
-    data = pd.concat([data,newdata], ignore_index=True)
+    data = data.append(newdata)
 
     # sort the dataset by stu id
     data = data.sort_values(by = 'stuUserId', ascending=True)
