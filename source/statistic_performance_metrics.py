@@ -58,12 +58,37 @@ if __name__ == '__main__':
     if not os.path.exists('../result'):
         os.mkdir('../result')
 
-    with open('../result/statistic_performance_metrics.csv', 'a', newline = '') as csvfile:
+    with open('../result/statistic_performance_metrics.csv', 'w', newline = '') as csvfile:
         my_writer = csv.writer(csvfile)
-        my_writer.writerow(["--------------ITERATION {}--------------".format(walk)])
+        my_writer.writerow(["startDatetime", "Total_acc", "Total_mse", "FILLBLANK_acc", "FILLBLANK_mse", "MCHOICE_acc", "MCHOICE_mse", "SCHOICE_acc", "SCHOICE_mse", "SHORTANSWER_acc", "SHORTANSWER_mse"])
 
         for i in date_list:
             list_metrics = list(stat_metrics(pred_df_copy[pred_df_copy['startDatetime'] == i]))
-            list_metrics.insert(0, i)
-            my_writer.writerows(map(lambda x: [x], list_metrics))
+            keys = list(list_metrics[2].keys())
+            result = [i, list_metrics[0], list_metrics[1]]
+            if 'FILLBLANK' in keys:
+                result.append(list_metrics[2]['FILLBLANK'])
+                result.append(list_metrics[3]['FILLBLANK'])
+            else:
+                result.append(None)
+                result.append(None)
+            if 'MCHOICE' in keys:
+                result.append(list_metrics[2]['MCHOICE'])
+                result.append(list_metrics[3]['MCHOICE'])
+            else:
+                result.append(None)
+                result.append(None)
+            if 'SCHOICE' in keys:
+                result.append(list_metrics[2]['SCHOICE'])
+                result.append(list_metrics[3]['SCHOICE'])
+            else:
+                result.append(None)
+                result.append(None)
+            if 'SHORTANSWER' in keys:
+                result.append(list_metrics[2]['SHORTANSWER'])
+                result.append(list_metrics[3]['SHORTANSWER'])
+            else:
+                result.append(None)
+                result.append(None)
+            my_writer.writerows([result])
         
