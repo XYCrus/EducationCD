@@ -14,6 +14,9 @@ python leave_n_test.py *n* *d*
 
 # -- Statist Model Manually
 python leave_n_split.py ../data/wholedata.csv *n*
+
 python statistic_training_complete.py ../model/training_dataset.csv ../result ../model
+
 python statistic_prediction.py ../model/testing_dataset.csv ../result ../model
+
 python statistic_performance_metrics.py ../result *n*
