@@ -3,8 +3,8 @@ import sys
 import numpy as np
 
 if __name__ == '__main__':
-    iteration = sys.argv[1]
-    dataset_option = sys.argv[2]
+    dataset_option = sys.argv[1]
+    iteration = sys.argv[2]
     
     for walk in np.arange(1, int(iteration) + 1):
         os.system("python leave_n_split.py {} {}".format(dataset_option, walk))
