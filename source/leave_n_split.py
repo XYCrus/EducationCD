@@ -14,6 +14,7 @@ def leave_n_pipeline(wholedata_path, leave_n = 1):
     datapath = "../model/training_dataset.csv" 
     testpath = "../model/testing_dataset.csv"
 
+    wholedata['startDatetime'] = pd.to_datetime(wholedata['startDatetime'])
     exam_dates = np.sort(wholedata['startDatetime'].unique())
     test_dates = exam_dates[-int(leave_n):]
 

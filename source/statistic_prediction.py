@@ -121,11 +121,11 @@ def predict_student_scores_after_mapping(question_type, predictionBeforeMapping)
     if question_type == "SCHOICE":
         predictionAfterMapping = 1 if predictionBeforeMapping > 0.5 else 0
     elif question_type == "FILLBLANK" or question_type == "MCHOICE":
-        if predictionBeforeMapping > 0.8:
+        if predictionBeforeMapping >= 0.7:
             predictionAfterMapping = 1
         elif predictionBeforeMapping > 0.5:
             predictionAfterMapping = 0.6
-        elif predictionBeforeMapping > 0.2:
+        elif predictionBeforeMapping > 0.3:
             predictionAfterMapping = 0.4
         else:
             predictionAfterMapping = 0
@@ -182,16 +182,10 @@ if __name__ == '__main__':
         qt = row['questionType']
         answer_score = row['scorePercentage']
         predictionAfterMapping = row['predictionAfterMapping']
-        if qt != "SHORTANSWER":
-            if answer_score == predictionAfterMapping:
-                answer_accuracy = 1
-            else:
-                answer_accuracy = 0
-        elif qt == "SHORTANSWER":
-            if 1.2 * answer_score >= predictionAfterMapping >= 0.8 * answer_score:
-                answer_accuracy = 1
-            else:
-                answer_accuracy = 0
+        if abs(answer_score - predictionAfterMapping) <= 0.3:
+            answer_accuracy = 1
+        else:
+            answer_accuracy = 0
         prediction_df_copy.loc[index, 'accuracyFlag'] = answer_accuracy
 
     accu = np.array(prediction_df_copy["accuracyFlag"])
