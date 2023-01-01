@@ -103,7 +103,7 @@ def predict_student_scores_before_mapping(student_set, knowledge_set,knowledge_s
             # when klg_id is not none and is unknown
             elif knowledge_id not in knowledge_set:
                 single_stu_score.append(student_average_dict[stuUserId])
-        predictionBeforeMapping = min(single_stu_score)
+        predictionBeforeMapping = max(single_stu_score)
     elif stuUserId not in student_set:
         for j in range(knowledge_num):
             knowledge_id = knowledgeTagIds[j]
@@ -113,7 +113,7 @@ def predict_student_scores_before_mapping(student_set, knowledge_set,knowledge_s
             # when klg_id is not none and is unknown
             elif knowledge_id not in knowledge_set:
                 single_stu_score.append(total_average)
-        predictionBeforeMapping = min(single_stu_score)
+        predictionBeforeMapping = max(single_stu_score)
     return predictionBeforeMapping
 
 
