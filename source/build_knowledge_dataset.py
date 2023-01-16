@@ -6,8 +6,11 @@ import json
 import os
 
 
-def collect_pairs(datapath):
-    df = pd.read_csv(datapath)
+def collect_pairs(datapath, df = True):
+    if df:
+        df = pd.read_csv(datapath)
+    else:
+        df = datapath
     pair_set = set([])
     for i in range(df.shape[0]):
         stu = df['stuUserId'].iloc[i]

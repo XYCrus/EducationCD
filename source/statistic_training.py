@@ -45,50 +45,51 @@ def get_summary(df, stu_id):
     return avg_scores, count_0, count_1, single_apr, complex_apr
 
 
-def extract_stu_klg(model, result_folder='../result'):
+def extract_stu_klg(model, result_folder='../result', write = True):
     # save as csv file
     stu_klg = pd.DataFrame(model, columns=['stuUserId', 'knowledgeTagIds', 'scorePercentage'])
     stu_klg = stu_klg.set_index("stuUserId", drop=True)
-    stu_klg.to_csv(result_folder + "/student_knowledge_statistics.csv")
+    if write:
+        stu_klg.to_csv(result_folder + "/student_knowledge_statistics.csv")
 
 
-def extract_stu_klg_json(json_data, result_folder='../result'):
+def extract_stu_klg_json(json_data, result_folder='../result', write = True):
     json_data = list(json_data.values())
-    with open(result_folder + "/student_knowledge_statistics.json", "w") as outfile:
-        json.dump(json_data, outfile, indent=4)
+    if write:
+        with open(result_folder + "/student_knowledge_statistics.json", "w") as outfile:
+            json.dump(json_data, outfile, indent=4)
 
 
-def extract_klg_avg(model: pd.DataFrame, model_folder='../model', result_folder='../result'):
+def extract_klg_avg(model: pd.DataFrame, model_folder='../model', result_folder='../result', write = True):
     df = model.copy()
     df = df.set_index('knowledgeTagIds', drop=False)
     grouped = df['scorePercentage'].groupby('knowledgeTagIds').mean()
     model['klg_avg'] = model['knowledgeTagIds'].apply(lambda x: grouped.loc[x])
     klg_avg_dict = dict(grouped)
 
-    with open(result_folder + "/knowledge_average.json", "w") as outfile:
-        json.dump(klg_avg_dict, outfile, indent=4)
-
-    with open(model_folder + "/knowledge_average.json", "w") as outfile:
-        json.dump(klg_avg_dict, outfile, indent=4)
-
+    if write:
+        with open(result_folder + "/knowledge_average.json", "w") as outfile:
+            json.dump(klg_avg_dict, outfile, indent=4)
+        with open(model_folder + "/knowledge_average.json", "w") as outfile:
+            json.dump(klg_avg_dict, outfile, indent=4)
     return model
 
 
-def extract_stu_avg(model: pd.DataFrame, model_folder='../model', result_folder='../result'):
+def extract_stu_avg(model: pd.DataFrame, model_folder='../model', result_folder='../result', write = True):
     df = model.copy()
     df = df.set_index('stuUserId', drop=False)
     grouped = df['scorePercentage'].groupby('stuUserId').mean()
     model['stu_avg'] = model['stuUserId'].apply(lambda x: grouped.loc[x])
     stu_score = dict(grouped)
-
-    with open(result_folder + "/student_average.json", "w") as outfile:
-        json.dump(stu_score, outfile, indent=4)
-
-    with open(model_folder + "/student_average.json", "w") as outfile:
-        json.dump(stu_score, outfile, indent=4)
-
-    return model
-
+    if write:
+        with open(result_folder + "/student_average.json", "w") as outfile:
+            json.dump(stu_score, outfile, indent=4)
+        with open(model_folder + "/student_average.json", "w") as outfile:
+            json.dump(stu_score, outfile, indent=4)
+        return model
+    else:
+        stringoutput = json.dumps(stu_score, indent=4)
+        return stringoutput
 
 def create_statistic_model(datapath: string, model_folder='../model', result_folder='../result'):
     # load data
