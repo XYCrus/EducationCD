@@ -15,9 +15,9 @@ def read(filename):
     return result
 
 
-def run(wholedata_path, model_folder = '../model', result_folder = '../result', n_latest = 3, n_fill = 3):
-    jsonfile = json.loads(wholedata_path)
-    wholedata = pd.DataFrame.from_dict(jsonfile)
+def run(stringinput, model_folder = '../model', result_folder = '../result', n_latest = 3, n_fill = 3):
+    jsonstring = json.loads(stringinput)
+    wholedata = pd.DataFrame.from_dict(jsonstring)
 
     exam_dates = np.sort(wholedata['startDatetime'].unique())
     latest_dates = exam_dates[-n_latest:]
@@ -210,7 +210,7 @@ def run(wholedata_path, model_folder = '../model', result_folder = '../result', 
     model = extract_stu_avg(model, model_folder, result_folder, False)
 
     return model
-    
+
 '''
 def dummy(filename):
     wholedata = pd.read_csv(filename)
