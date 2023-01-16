@@ -13,11 +13,14 @@ from continuous_training import retrain
 def read(filename):
     wholedata = pd.read_csv(filename)
     result = wholedata.to_json(orient="columns")
+    parsed = json.loads(result)
+    #json.dumps(parsed, indent=4)
+
     if not os.path.exists('../result'):
         os.mkdir('../result')
 
     with open("../result/format.json", "w") as outfile:
-        json.dump(result, outfile, indent=4)
+        json.dump(parsed, outfile, indent=4)
     return result
 
 
@@ -249,8 +252,8 @@ if __name__ == '__main__':
         filename = sys.argv[1]
         stringinput = read(filename)
         stringoutput = run(stringinput)
-        #print(stringoutput)
-        #print(type(stringoutput))
+        print(stringoutput)
+        print(type(stringoutput))
         
     end = datetime.now()
     print("time: ", end - begin)
