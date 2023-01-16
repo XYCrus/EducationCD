@@ -2,6 +2,7 @@
 import sys
 import numpy as np
 import pandas as pd
+import os
 import json
 from datetime import datetime
 from build_knowledge_dataset import build_dataset,collect_pairs
@@ -12,6 +13,11 @@ from continuous_training import retrain
 def read(filename):
     wholedata = pd.read_csv(filename)
     result = wholedata.to_json(orient="columns")
+    if not os.path.exists('../result'):
+        os.mkdir('../result')
+
+    with open("../result/format.json", "w") as outfile:
+        json.dump(result, outfile, indent=4)
     return result
 
 
