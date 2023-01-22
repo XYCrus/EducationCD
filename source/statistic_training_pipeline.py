@@ -155,19 +155,14 @@ def row_to_obj(row: pd.Series) -> dict:
             obj[k] = v
     return obj
     
-def read(filename, outputNeeded = True):
-    # csv to json
-    if not outputNeeded:
-        wholedata = csv_to_json(filename)
-        
+def preprocess(filename, outputNeeded = True): 
     # csv to dataframe
-    else:
+    if outputNeeded:
         if not os.path.exists('../result'):
             os.mkdir('../result') 
         if not os.path.exists('../model'):
             os.mkdir('../model')
-        
-        wholedata = pd.read_csv(filename)
+    wholedata = csv_to_json(filename)
         
     #print(wholedata)
     return wholedata
@@ -257,8 +252,8 @@ def summary_pre(indices, data, wholedata):
     
     return newdata, df, data, stu, all_stu, klgdata
 
-def output_choice(Output, model, model_folder, result_folder, json_data):
-    if not Output:
+def output_choice(outputNeeded, model, model_folder, result_folder, json_data):
+    if not outputNeeded:
         return extract_common(model, model_folder, result_folder, False)
     
     else:
@@ -287,17 +282,14 @@ def df_summary(stu, avg_scores, count_0, count_1, count_single, count_multiple):
     
     return data, model
     
-def run(Input, 
-        Output = False,
+def run(inputstring, 
+        outputNeeded = False,
         model_folder = '../model', 
         result_folder = '../result', 
         n_latest = 3, 
         n_fill = 3):
     
-    if not Output:
-        wholedata = json_to_df(Input)
-    else:
-        wholedata = Input
+    wholedata = json_to_df(inputstring)
 
     data, pairs = latest_pairs(wholedata, n_latest)
 
@@ -445,7 +437,7 @@ def run(Input,
     model = model.sort_values(by=['stuUserId', 'knowledgeTagIds'], ascending=(True, True))
     
     
-    return output_choice(Output, model, 
+    return output_choice(outputNeeded, model, 
                          model_folder, 
                          result_folder, 
                          json_data)
@@ -455,17 +447,14 @@ if __name__ == '__main__':
     begin = datetime.now()
 
     if len(sys.argv) == 4: 
-        filename = sys.argv[1]
-        stringinput = read(filename, outputNeeded = True)
-        stringoutput = run(stringinput, Output = True)
-        
-    # no output
+        outputNeeded = True
+      # no output
     elif len(sys.argv) == 2:  
-        filename = sys.argv[1]
-        stringinput = read(filename, outputNeeded = False)
-        stringoutput = run(stringinput, Output = False)
-        #print(stringoutput)
-        #print(type(stringoutput))
+       outputNeeded = False
+
+    filename = sys.argv[1]
+    stringinput = preprocess(filename, outputNeeded)
+    stringoutput = run(stringinput, outputNeeded)        
         
     end = datetime.now()
     print("time: ", end - begin)

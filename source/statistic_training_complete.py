@@ -10,10 +10,10 @@ from statistic_training import extract_stu_klg, extract_stu_klg_json, create_sta
 from continuous_training import retrain
 
 #%%
-def read(filename, OutputFileType = 'json'):
+def read(filename, ifoutputneeded = False):
     wholedata = pd.read_csv(filename)
     
-    if OutputFileType == 'json':
+    if OutputFileType == True:
         result = wholedata.to_json(orient="columns")
         parsed = json.loads(result)
         #json.dumps(parsed, indent=4)
@@ -25,7 +25,7 @@ def read(filename, OutputFileType = 'json'):
             json.dump(parsed, outfile, indent=4)
         return result
     
-    elif OutputFileType == 'csv':
+    else :
         if not os.path.exists('../model'):
             os.mkdir('../model')
             
@@ -286,13 +286,13 @@ if __name__ == '__main__':
 
     if len(sys.argv) == 4: 
         filename = sys.argv[1]
-        stringinput = read(filename, OutputFileType = 'csv')
+        stringinput = read(filename, True)
         stringoutput = run(stringinput, Output = True)
         
     # no output
     elif len(sys.argv) == 2:  
         filename = sys.argv[1]
-        stringinput = read(filename, OutputFileType = 'json')
+        stringinput = read(filename, False)
         stringoutput = run(stringinput, Output = False)
         #print(stringoutput)
         #print(type(stringoutput))
