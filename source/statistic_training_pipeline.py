@@ -135,31 +135,55 @@ def extract_extra(model, js_data, folderm, folderr):
     
     return model
     
-def read(filename, OutputFileType = 'json'):
-    wholedata = pd.read_csv(filename)
+def csv_to_json(csv_filename: str):
+    df = pd.read_csv(csv_filename, dtype=str)
+    data = [
+        row_to_obj(row)
+        for _, row in df.iterrows()
+    ]
+    result = json.dumps(data, indent=4)
+    return result
     
-    if not os.path.exists('../result'):
-        os.mkdir('../result')
+def row_to_obj(row: pd.Series) -> dict:
+    obj = {}
+    for k, v in row.items():
+        if k == 'knowledgeTagIds':
+            obj[k] = json.loads(v)
+        elif k == "scorePercentage":
+            obj[k] = float(v)
+        else:
+            obj[k] = v
+    return obj
+    
+def read(filename, outputNeeded = True):
+    # csv to json
+    if not outputNeeded:
+        wholedata = csv_to_json(filename)
         
-    if OutputFileType == 'json':
-        result = wholedata.to_json(orient="columns")
-        parsed = json.loads(result)
-        #json.dumps(parsed, indent=4)
-    
-        with open("../result/format.json", "w") as outfile:
-            json.dump(parsed, outfile, indent=4)
-        return result
-    
-    elif OutputFileType == 'csv':
+    # csv to dataframe
+    else:
+        if not os.path.exists('../result'):
+            os.mkdir('../result') 
         if not os.path.exists('../model'):
             os.mkdir('../model')
-            
-        return wholedata
+        
+        wholedata = pd.read_csv(filename)
+        
+    #print(wholedata)
+    return wholedata
 
+'''
 def json_to_df(jsFile):
     jsonstring = json.loads(jsFile)
     wholedata = pd.DataFrame.from_dict(jsonstring)
     return wholedata
+'''
+
+def json_to_df(json_file: str) -> pd.DataFrame:
+    data = json.load(json_file)
+    for record in data:
+        record['knowledgeTagIds'] = json.dumps(record['knowledgeTagIds'])
+    return pd.DataFrame(data)
 
 def latest_pairs(df, n_latest):
     exam_dates = np.sort(df['startDatetime'].unique())
@@ -233,6 +257,36 @@ def summary_pre(indices, data, wholedata):
     
     return newdata, df, data, stu, all_stu, klgdata
 
+def output_choice(Output, model, model_folder, result_folder, json_data):
+    if not Output:
+        return extract_common(model, model_folder, result_folder, False)
+    
+    else:
+        model = extract_common(model, model_folder, result_folder, True)
+        return extract_extra(model, json_data, model_folder, result_folder)
+
+def df_summary(stu, avg_scores, count_0, count_1, count_single, count_multiple):
+    klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
+    stu_col = [stu] * len(klg_col)
+    count_1_col = list(count_1.values())
+    count_0_col = list(count_0.values())
+    count_single_col = list(count_single.values())
+    count_multi_col = list(count_multiple.values())
+    count_tot = np.array(count_single_col) + np.array(count_multi_col)
+
+    data = {'stuUserId': stu_col, 
+            'knowledgeTagIds': klg_col, 
+            'scorePercentage': score_col,
+            '1_score_count': count_1_col,
+            '0_score_count': count_0_col, 
+            'single_knowledge': count_single_col, 
+            'multiple_knowledge': count_multi_col,
+            'total_count': count_tot}
+    
+    model = pd.DataFrame(data=data)
+    
+    return data, model
+    
 def run(Input, 
         Output = False,
         model_folder = '../model', 
@@ -268,28 +322,9 @@ def run(Input,
      count_single, 
      count_multiple) = get_summary(df, stu)
     
+    data, model = df_summary(stu, avg_scores, count_0, count_1, count_single, count_multiple)
+
     ''' '''
-
-    klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
-    stu_col = [stu] * len(klg_col)
-    count_1_col = list(count_1.values())
-    count_0_col = list(count_0.values())
-    count_single_col = list(count_single.values())
-    count_multi_col = list(count_multiple.values())
-    count_tot = np.array(count_single_col) + np.array(count_multi_col)
-
-    data = {'stuUserId': stu_col, 
-            'knowledgeTagIds': klg_col, 
-            'scorePercentage': score_col,
-            '1_score_count': count_1_col,
-            '0_score_count': count_0_col, 
-            'single_knowledge': count_single_col, 
-            'multiple_knowledge': count_multi_col,
-            'total_count': count_tot}
-    
-    
-    
-    model = pd.DataFrame(data=data)
 
     ## initialize json data
     json_data = {}
@@ -410,14 +445,10 @@ def run(Input,
     model = model.sort_values(by=['stuUserId', 'knowledgeTagIds'], ascending=(True, True))
     
     
-    if not Output:
-    
-        return extract_common(model, model_folder, result_folder, False)
-    
-    else:
-        model = extract_common(model, model_folder, result_folder, True)
-        
-        return extract_extra(model, json_data, model_folder, result_folder)
+    return output_choice(Output, model, 
+                         model_folder, 
+                         result_folder, 
+                         json_data)
     
 #%% main
 if __name__ == '__main__':
@@ -425,13 +456,13 @@ if __name__ == '__main__':
 
     if len(sys.argv) == 4: 
         filename = sys.argv[1]
-        stringinput = read(filename, OutputFileType = 'csv')
+        stringinput = read(filename, outputNeeded = True)
         stringoutput = run(stringinput, Output = True)
         
     # no output
     elif len(sys.argv) == 2:  
         filename = sys.argv[1]
-        stringinput = read(filename, OutputFileType = 'json')
+        stringinput = read(filename, outputNeeded = False)
         stringoutput = run(stringinput, Output = False)
         #print(stringoutput)
         #print(type(stringoutput))
