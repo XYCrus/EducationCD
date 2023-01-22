@@ -1,4 +1,4 @@
-#%%
+#%% packages
 import sys
 import numpy as np
 import pandas as pd
@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 import os.path
 
-#%%
+#%% functions
 def collect_pairs(datapath, df = True):
     if df:
         df = pd.read_csv(datapath)
@@ -160,34 +160,22 @@ def json_to_df(jsFile):
     jsonstring = json.loads(jsFile)
     wholedata = pd.DataFrame.from_dict(jsonstring)
     return wholedata
-    
-def run(Input, 
-        Output = False,
-        model_folder = '../model', 
-        result_folder = '../result', 
-        n_latest = 3, 
-        n_fill = 3):
-    
-    if not Output:
-        wholedata = json_to_df(Input)
-    else:
-        wholedata = Input
 
-    exam_dates = np.sort(wholedata['startDatetime'].unique())
+def latest_pairs(df, n_latest):
+    exam_dates = np.sort(df['startDatetime'].unique())
     latest_dates = exam_dates[-n_latest:]
 
-    latest = wholedata[wholedata['startDatetime'].isin(latest_dates)]
+    latest = df[df['startDatetime'].isin(latest_dates)]
 
     data = latest
-    
     data['flag'] = 1
 
-    pairs = collect_pairs(wholedata, False) - collect_pairs(latest, False)
-
-    wholedata = wholedata.sort_values(by = 'startDatetime', ascending=False)
-
-    single = {pair:[] for pair in pairs}
-    complex = {pair:[] for pair in pairs}
+    pairs = collect_pairs(df, False) - collect_pairs(latest, False)
+    
+    return data, pairs
+    
+def sc_pairs(wholedata, pairs, n_fill):
+    single, complex = {pair:[] for pair in pairs}, {pair:[] for pair in pairs}
 
     N = wholedata.shape[0]
     for i in range(N):
@@ -205,6 +193,9 @@ def run(Input,
         if len(pairs) == 0: 
             break
     
+    return single, complex
+       
+def pair_record(pairs, single, complex, n_fill):
     records = {}
     pairs = single.keys()
     for pair in pairs:
@@ -215,13 +206,17 @@ def run(Input,
             else:
                 break
         records[pair] = record
-    
+    return pairs, records
+
+def set_indice(records):
     indices = set([])
     for record in records.values():
         for index in record:
             indices.add(index)
     indices = list(indices)
-    
+    return indices
+
+def summary_pre(indices, data, wholedata):
     newdata = wholedata.loc[indices]
     newdata['flag'] = 0
     data = data.append(newdata)
@@ -235,7 +230,45 @@ def run(Input,
     all_stu = df['stuUserId'].unique()
 
     stu = all_stu[0]
-    avg_scores, count_0, count_1, count_single, count_multiple = get_summary(df, stu)
+    
+    return newdata, df, data, stu, all_stu, klgdata
+
+def run(Input, 
+        Output = False,
+        model_folder = '../model', 
+        result_folder = '../result', 
+        n_latest = 3, 
+        n_fill = 3):
+    
+    if not Output:
+        wholedata = json_to_df(Input)
+    else:
+        wholedata = Input
+
+    data, pairs = latest_pairs(wholedata, n_latest)
+
+    wholedata = wholedata.sort_values(by = 'startDatetime', ascending=False)
+
+    single, complex = sc_pairs(wholedata, pairs, n_fill)
+    
+    pairs, records = pair_record(pairs, single, complex, n_fill)
+    
+    indices = set_indice(records)
+    
+    (newdata, 
+     df, 
+     data, 
+     stu, 
+     all_stu, 
+     klgdata) = summary_pre(indices, data, wholedata)
+    
+    (avg_scores, 
+     count_0, 
+     count_1, 
+     count_single, 
+     count_multiple) = get_summary(df, stu)
+    
+    ''' '''
 
     klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
     stu_col = [stu] * len(klg_col)
@@ -253,6 +286,8 @@ def run(Input,
             'single_knowledge': count_single_col, 
             'multiple_knowledge': count_multi_col,
             'total_count': count_tot}
+    
+    
     
     model = pd.DataFrame(data=data)
 
@@ -384,7 +419,7 @@ def run(Input,
         
         return extract_extra(model, json_data, model_folder, result_folder)
     
-#%%
+#%% main
 if __name__ == '__main__':
     begin = datetime.now()
 
