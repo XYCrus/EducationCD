@@ -6,27 +6,43 @@ import os
 import json
 from datetime import datetime
 from build_knowledge_dataset import build_dataset,collect_pairs
-from statistic_training import create_statistic_model, check_folder, extract_klg_avg, extract_stu_avg,get_summary
+from statistic_training import extract_stu_klg, extract_stu_klg_json, create_statistic_model, check_folder, extract_klg_avg, extract_stu_avg,get_summary
 from continuous_training import retrain
 
 #%%
-def read(filename):
+def read(filename, ifoutputneeded = False):
     wholedata = pd.read_csv(filename)
-    result = wholedata.to_json(orient="columns")
-    parsed = json.loads(result)
-    #json.dumps(parsed, indent=4)
+    
+    if OutputFileType == True:
+        result = wholedata.to_json(orient="columns")
+        parsed = json.loads(result)
+        #json.dumps(parsed, indent=4)
+    
+        if not os.path.exists('../result'):
+            os.mkdir('../result')
+    
+        with open("../result/format.json", "w") as outfile:
+            json.dump(parsed, outfile, indent=4)
+        return result
+    
+    else :
+        if not os.path.exists('../model'):
+            os.mkdir('../model')
+            
+        return wholedata
 
-    if not os.path.exists('../result'):
-        os.mkdir('../result')
-
-    with open("../result/format.json", "w") as outfile:
-        json.dump(parsed, outfile, indent=4)
-    return result
-
-
-def run(stringinput, model_folder = '../model', result_folder = '../result', n_latest = 3, n_fill = 3):
-    jsonstring = json.loads(stringinput)
-    wholedata = pd.DataFrame.from_dict(jsonstring)
+def run(Input, 
+        Output = False,
+        model_folder = '../model', 
+        result_folder = '../result', 
+        n_latest = 3, 
+        n_fill = 3):
+    
+    if Output == False:
+        jsonstring = json.loads(Input)
+        wholedata = pd.DataFrame.from_dict(jsonstring)
+    else:
+        wholedata = Input
 
     exam_dates = np.sort(wholedata['startDatetime'].unique())
     latest_dates = exam_dates[-n_latest:]
@@ -100,10 +116,15 @@ def run(stringinput, model_folder = '../model', result_folder = '../result', n_l
     count_multi_col = list(count_multiple.values())
     count_tot = np.array(count_single_col) + np.array(count_multi_col)
 
-    data = {'stuUserId': stu_col, 'knowledgeTagIds': klg_col, 'scorePercentage': score_col,
+    data = {'stuUserId': stu_col, 
+            'knowledgeTagIds': klg_col, 
+            'scorePercentage': score_col,
             '1_score_count': count_1_col,
-            '0_score_count': count_0_col, 'single_knowledge': count_single_col, 'multiple_knowledge': count_multi_col,
+            '0_score_count': count_0_col, 
+            'single_knowledge': count_single_col, 
+            'multiple_knowledge': count_multi_col,
             'total_count': count_tot}
+    
     model = pd.DataFrame(data=data)
 
     ## initialize json data
@@ -128,9 +149,12 @@ def run(stringinput, model_folder = '../model', result_folder = '../result', n_l
         count_multi_col = list(count_multiple.values())
         count_tot = np.array(count_single_col) + np.array(count_multi_col)
 
-        data = {'stuUserId': stu_col, 'knowledgeTagIds': klg_col, 'scorePercentage': score_col,
+        data = {'stuUserId': stu_col, 
+                'knowledgeTagIds': klg_col, 
+                'scorePercentage': score_col,
                 '1_score_count': count_1_col,
-                '0_score_count': count_0_col, 'single_knowledge': count_single_col,
+                '0_score_count': count_0_col, 
+                'single_knowledge': count_single_col,
                 'multiple_knowledge': count_multi_col,
                 'total_count': count_tot}
         chunk = pd.DataFrame(data=data)
@@ -161,9 +185,13 @@ def run(stringinput, model_folder = '../model', result_folder = '../result', n_l
     count_multi_col = list(count_multiple.values())
     count_tot = np.array(count_single_col) + np.array(count_multi_col)
 
-    data = {'stuUserId': stu_col, 'knowledgeTagIds': klg_col, 'scorePercentage': score_col,
+    data = {'stuUserId': stu_col, 
+            'knowledgeTagIds': klg_col, 
+            'scorePercentage': score_col,
             '1_score_count': count_1_col,
-            '0_score_count': count_0_col, 'single_knowledge': count_single_col, 'multiple_knowledge': count_multi_col,
+            '0_score_count': count_0_col, 
+            'single_knowledge': count_single_col, 
+            'multiple_knowledge': count_multi_col,
             'total_count': count_tot}
     model_extension = pd.DataFrame(data=data)
 
@@ -189,9 +217,12 @@ def run(stringinput, model_folder = '../model', result_folder = '../result', n_l
         count_multi_col = list(count_multiple.values())
         count_tot = np.array(count_single_col) + np.array(count_multi_col)
 
-        data = {'stuUserId': stu_col, 'knowledgeTagIds': klg_col, 'scorePercentage': score_col,
+        data = {'stuUserId': stu_col, 
+                'knowledgeTagIds': klg_col, 
+                'scorePercentage': score_col,
                 '1_score_count': count_1_col,
-                '0_score_count': count_0_col, 'single_knowledge': count_single_col,
+                '0_score_count': count_0_col, 
+                'single_knowledge': count_single_col,
                 'multiple_knowledge': count_multi_col,
                 'total_count': count_tot}
         chunk = pd.DataFrame(data=data)
@@ -213,12 +244,32 @@ def run(stringinput, model_folder = '../model', result_folder = '../result', n_l
     model = pd.concat([model, model_extension], ignore_index=True)
 
     model = model.sort_values(by=['stuUserId', 'knowledgeTagIds'], ascending=(True, True))
+    
+    
+    if Output == False:
 
-    model = extract_klg_avg(model, model_folder, result_folder, False)
+        model = extract_klg_avg(model, model_folder, result_folder, False)
+    
+        model = extract_stu_avg(model, model_folder, result_folder, False)
+    
+        return model
+    
+    else:
+        model = extract_klg_avg(model, model_folder, result_folder)
 
-    model = extract_stu_avg(model, model_folder, result_folder, False)
-
-    return model
+        model = extract_stu_avg(model, model_folder, result_folder)
+    
+        for i in range(model.shape[0]):
+            model['knowledgeTagIds'].iloc[i] = json.dumps([model['knowledgeTagIds'].iloc[i]])
+    
+        extract_stu_klg(model, result_folder, True)
+        extract_stu_klg_json(json_data, result_folder, True)
+    
+        model = model.set_index("stuUserId", drop=True)
+    
+        model.to_csv(model_folder + "/model.csv")
+        
+        return model
 
 '''
 def dummy(filename):
@@ -233,27 +284,18 @@ def dummy(filename):
 if __name__ == '__main__':
     begin = datetime.now()
 
-    if len(sys.argv) == 4:  
-        wholedata_file = sys.argv[1]
-        if not (wholedata_file.endswith('.csv')):
-            print('wrong file type')
-            exit(1)
-
-        result_folder = sys.argv[2]
-        model_folder = sys.argv[3]
-
-        check_folder(result_folder=result_folder, model_folder=model_folder)
-        build_dataset(wholedata_file, model_folder)
-        data_file = model_folder + "/knowledge_dataset.csv"
-        create_statistic_model(data_file, model_folder=model_folder, result_folder=result_folder)
-
+    if len(sys.argv) == 4: 
+        filename = sys.argv[1]
+        stringinput = read(filename, True)
+        stringoutput = run(stringinput, Output = True)
+        
     # no output
     elif len(sys.argv) == 2:  
         filename = sys.argv[1]
-        stringinput = read(filename)
-        stringoutput = run(stringinput)
-        print(stringoutput)
-        print(type(stringoutput))
+        stringinput = read(filename, False)
+        stringoutput = run(stringinput, Output = False)
+        #print(stringoutput)
+        #print(type(stringoutput))
         
     end = datetime.now()
     print("time: ", end - begin)
