@@ -23,6 +23,8 @@ python leave_n_test.py *d* *n*
 
 # -- Pipeline Testing
 
-* python statistic_training_pipeline.py ../data/wholedata.csv ../result ../model
+### python statistic_training_pipeline.py ../data/wholedata.csv ../result ../model
+* Output Needed
 
-* python statistic_training_pipeline.py ../data/wholedata.csv 
+### python statistic_training_pipeline.py ../data/wholedata.csv 
+* Output Not Needed
