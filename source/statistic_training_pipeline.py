@@ -175,7 +175,7 @@ def json_to_df(jsFile):
 '''
 
 def json_to_df(json_file: str) -> pd.DataFrame:
-    data = json.load(json_file)
+    data = json.loads(json_file)
     for record in data:
         record['knowledgeTagIds'] = json.dumps(record['knowledgeTagIds'])
     return pd.DataFrame(data)
