@@ -1,0 +1,22 @@
+[
+    {
+        "stuUserId": "82",
+        "knowledgeTagId": "268356",
+        "scorePercentage": 0.8
+    },
+    {
+        "stuUserId": "82",
+        "knowledgeTagId": "268347",
+        "scorePercentage": 0.8
+    },
+    {
+        "stuUserId": "83",
+        "knowledgeTagId": "268356",
+        "scorePercentage": 0.9
+    },
+    {
+        "stuUserId": "83",
+        "knowledgeTagId": "268347",
+        "scorePercentage": 0.9
+    }
+]

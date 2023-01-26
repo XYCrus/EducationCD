@@ -31,12 +31,12 @@ def read(filename, ifoutputneeded = False):
             
         return wholedata
 
-def run(Input, 
-        Output = False,
-        model_folder = '../model', 
-        result_folder = '../result', 
-        n_latest = 3, 
-        n_fill = 3):
+def train_stats_model(Input,
+                      Output = False,
+                      model_folder = '../model',
+                      result_folder = '../result',
+                      n_latest = 3,
+                      n_fill = 3):
     
     if Output == False:
         jsonstring = json.loads(Input)
@@ -287,13 +287,13 @@ if __name__ == '__main__':
     if len(sys.argv) == 4: 
         filename = sys.argv[1]
         stringinput = read(filename, True)
-        stringoutput = run(stringinput, Output = True)
+        stringoutput = train_stats_model(stringinput, Output = True)
         
     # no output
     elif len(sys.argv) == 2:  
         filename = sys.argv[1]
         stringinput = read(filename, False)
-        stringoutput = run(stringinput, Output = False)
+        stringoutput = train_stats_model(stringinput, Output = False)
         #print(stringoutput)
         #print(type(stringoutput))
         
