@@ -282,7 +282,7 @@ def df_summary(stu, avg_scores, count_0, count_1, count_single, count_multiple):
     
     return data, model
     
-def run(inputstring, 
+def train_stats_model(inputstring,
         outputNeeded = False,
         model_folder = '../model', 
         result_folder = '../result', 
@@ -454,7 +454,7 @@ if __name__ == '__main__':
 
     filename = sys.argv[1]
     stringinput = preprocess(filename, outputNeeded)
-    stringoutput = run(stringinput, outputNeeded)        
+    stringoutput = train_stats_model(stringinput, outputNeeded)
         
     end = datetime.now()
     print("time: ", end - begin)

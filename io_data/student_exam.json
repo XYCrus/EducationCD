@@ -1,0 +1,26 @@
+[
+  {
+    "stuUserId": "82",
+    "examinationId": "4",
+    "startDatetime": "9/19/20 10:02",
+    "questionId": "1KQ7G74SK7",
+    "questionType": "SHORTANSWER",
+    "knowledgeTagIds": [
+      "268356",
+      "268347"
+    ],
+    "scorePercentage": 0.8
+  },
+  {
+    "stuUserId": "83",
+    "examinationId": "4",
+    "startDatetime": "9/19/20 10:02",
+    "questionId": "1KQ7G74SK7",
+    "questionType": "SHORTANSWER",
+    "knowledgeTagIds": [
+      "268356",
+      "268347"
+    ],
+    "scorePercentage": 0.9
+  }
+]
