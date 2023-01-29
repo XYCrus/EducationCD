@@ -254,7 +254,8 @@ def summary_pre(indices, data, wholedata):
 
 def output_choice(outputNeeded, model, model_folder, result_folder, json_data):
     if not outputNeeded:
-        return extract_common(model, model_folder, result_folder, False)
+        json_data = list(json_data.values())
+        return json.dumps(json_data)
     
     else:
         model = extract_common(model, model_folder, result_folder, True)
@@ -363,41 +364,10 @@ def train_stats_model(inputstring,
 
     fill_df = klgdata[klgdata['flag'] == 0]
 
-    all_stu = fill_df['stuUserId'].unique()
+    if not fill_df.empty:
+        all_stu = fill_df['stuUserId'].unique()
 
-    stu = all_stu[0]
-    avg_scores, count_0, count_1, count_single, count_multiple = get_summary(fill_df, stu)
-
-    klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
-    stu_col = [stu] * len(klg_col)
-    count_1_col = list(count_1.values())
-    count_0_col = list(count_0.values())
-    count_single_col = list(count_single.values())
-    count_multi_col = list(count_multiple.values())
-    count_tot = np.array(count_single_col) + np.array(count_multi_col)
-
-    data = {'stuUserId': stu_col, 
-            'knowledgeTagIds': klg_col, 
-            'scorePercentage': score_col,
-            '1_score_count': count_1_col,
-            '0_score_count': count_0_col, 
-            'single_knowledge': count_single_col, 
-            'multiple_knowledge': count_multi_col,
-            'total_count': count_tot}
-    model_extension = pd.DataFrame(data=data)
-
-    knowledgScores = []
-    for (key, val) in avg_scores.items():
-        knowledgScores.append({"knowledgeTagId": key, "score": val})
-    if stu in json_data.keys():
-        json_data[stu]['knowledgeScores'] += knowledgScores
-    else:
-        current_student_scores = {"stuUserId": str(stu)}
-        current_student_scores['knowledgeScores'] = knowledgScores
-        json_data[stu] = current_student_scores
-
-    for i in range(1, len(all_stu)):
-        stu = all_stu[i]
+        stu = all_stu[0]
         avg_scores, count_0, count_1, count_single, count_multiple = get_summary(fill_df, stu)
 
         klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
@@ -408,17 +378,15 @@ def train_stats_model(inputstring,
         count_multi_col = list(count_multiple.values())
         count_tot = np.array(count_single_col) + np.array(count_multi_col)
 
-        data = {'stuUserId': stu_col, 
-                'knowledgeTagIds': klg_col, 
+        data = {'stuUserId': stu_col,
+                'knowledgeTagIds': klg_col,
                 'scorePercentage': score_col,
                 '1_score_count': count_1_col,
-                '0_score_count': count_0_col, 
+                '0_score_count': count_0_col,
                 'single_knowledge': count_single_col,
                 'multiple_knowledge': count_multi_col,
                 'total_count': count_tot}
-        chunk = pd.DataFrame(data=data)
-
-        model_extension = pd.concat([model_extension, chunk], ignore_index=True)
+        model_extension = pd.DataFrame(data=data)
 
         knowledgScores = []
         for (key, val) in avg_scores.items():
@@ -430,9 +398,43 @@ def train_stats_model(inputstring,
             current_student_scores['knowledgeScores'] = knowledgScores
             json_data[stu] = current_student_scores
 
-    model_extension['flag'] = 0
+        for i in range(1, len(all_stu)):
+            stu = all_stu[i]
+            avg_scores, count_0, count_1, count_single, count_multiple = get_summary(fill_df, stu)
 
-    model = pd.concat([model, model_extension], ignore_index=True)
+            klg_col, score_col = list(avg_scores.keys()), list(avg_scores.values())
+            stu_col = [stu] * len(klg_col)
+            count_1_col = list(count_1.values())
+            count_0_col = list(count_0.values())
+            count_single_col = list(count_single.values())
+            count_multi_col = list(count_multiple.values())
+            count_tot = np.array(count_single_col) + np.array(count_multi_col)
+
+            data = {'stuUserId': stu_col,
+                    'knowledgeTagIds': klg_col,
+                    'scorePercentage': score_col,
+                    '1_score_count': count_1_col,
+                    '0_score_count': count_0_col,
+                    'single_knowledge': count_single_col,
+                    'multiple_knowledge': count_multi_col,
+                    'total_count': count_tot}
+            chunk = pd.DataFrame(data=data)
+
+            model_extension = pd.concat([model_extension, chunk], ignore_index=True)
+
+            knowledgScores = []
+            for (key, val) in avg_scores.items():
+                knowledgScores.append({"knowledgeTagId": key, "score": val})
+            if stu in json_data.keys():
+                json_data[stu]['knowledgeScores'] += knowledgScores
+            else:
+                current_student_scores = {"stuUserId": str(stu)}
+                current_student_scores['knowledgeScores'] = knowledgScores
+                json_data[stu] = current_student_scores
+
+        model_extension['flag'] = 0
+
+        model = pd.concat([model, model_extension], ignore_index=True)
 
     model = model.sort_values(by=['stuUserId', 'knowledgeTagIds'], ascending=(True, True))
     
