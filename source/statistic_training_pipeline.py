@@ -6,6 +6,7 @@ import os
 import json
 from datetime import datetime
 import os.path
+import warnings
 
 #%% functions
 def collect_pairs(datapath, df = True):
@@ -162,9 +163,23 @@ def preprocess(filename, outputNeeded = True):
             os.mkdir('../result') 
         if not os.path.exists('../model'):
             os.mkdir('../model')
-    wholedata = csv_to_json(filename)
-        
-    #print(wholedata)
+
+    if filename.endswith(".csv"): 
+        wholedata = csv_to_json(filename)
+        print('CSV Input Detected...')
+
+    elif filename.endswith(".json"):
+        with open(filename) as user_file:
+            wholedata = user_file.read()
+        print('Json Input Detected...')
+
+    '''
+    mydata = json.loads(wholedata)
+    with open('wholedata.json', 'w', encoding='utf-8') as jsonf: 
+        jsonString = json.dumps(mydata, indent=4)
+        jsonf.write(jsonString)
+    '''
+
     return wholedata
 
 '''
@@ -325,7 +340,7 @@ def train_stats_model(inputstring,
     current_student_scores = {"stuUserId": str(stu)}
     knowledgScores = []
     for (key, val) in avg_scores.items():
-        knowledgScores.append({"knowledgeTagId": key, "score": val})
+        knowledgScores.append({"knowledgeTagId": key, "score": round(val,2)})
     current_student_scores["knowledgeScores"] = knowledgScores
     json_data[stu] = current_student_scores
 
@@ -349,14 +364,14 @@ def train_stats_model(inputstring,
                 'single_knowledge': count_single_col,
                 'multiple_knowledge': count_multi_col,
                 'total_count': count_tot}
-        chunk = pd.DataFrame(data=data)
+        chunk = pd.DataFrame(data = data)
 
         model = pd.concat([model, chunk], ignore_index=True)
 
         current_student_scores = {"stuUserId": str(stu)}
         knowledgScores = []
         for (key, val) in avg_scores.items():
-            knowledgScores.append({"knowledgeTagId": key, "score": val})
+            knowledgScores.append({"knowledgeTagId": key, "score": round(val,2)})
         current_student_scores["knowledgeScores"] = knowledgScores
         json_data[stu] = current_student_scores
 
@@ -390,7 +405,7 @@ def train_stats_model(inputstring,
 
         knowledgScores = []
         for (key, val) in avg_scores.items():
-            knowledgScores.append({"knowledgeTagId": key, "score": val})
+            knowledgScores.append({"knowledgeTagId": key, "score": round(val,2)})
         if stu in json_data.keys():
             json_data[stu]['knowledgeScores'] += knowledgScores
         else:
@@ -424,7 +439,7 @@ def train_stats_model(inputstring,
 
             knowledgScores = []
             for (key, val) in avg_scores.items():
-                knowledgScores.append({"knowledgeTagId": key, "score": val})
+                knowledgScores.append({"knowledgeTagId": key, "score": round(val,2)})
             if stu in json_data.keys():
                 json_data[stu]['knowledgeScores'] += knowledgScores
             else:
@@ -448,6 +463,8 @@ def train_stats_model(inputstring,
 if __name__ == '__main__':
     begin = datetime.now()
 
+    warnings.filterwarnings("ignore")
+
     if len(sys.argv) == 4: 
         outputNeeded = True
       # no output
@@ -458,6 +475,8 @@ if __name__ == '__main__':
     stringinput = preprocess(filename, outputNeeded)
     stringoutput = train_stats_model(stringinput, outputNeeded)
         
+    #print(stringoutput)
+
     end = datetime.now()
     print("time: ", end - begin)
     
