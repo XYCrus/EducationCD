@@ -27,4 +27,5 @@ python leave_n_test.py *d* *n*
 * Output Needed
 
 ### python statistic_training_pipeline.py ../data/wholedata.csv 
+### python statistic_training_pipeline.py ../data/wholedata.json 
 * Output Not Needed
