@@ -1,4 +1,4 @@
-# -- Statist Model
+# -- Statistic Model
 python leave_n_split.py ../data/wholedata.csv *n*
 
 python statistic_training_complete.py ../model/training_dataset.csv ../result ../model
